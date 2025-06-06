@@ -1,0 +1,24 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.pyd
+
+# Virtual environment
+.venv/
+
+# Editor & OS files
+*.DS_Store
+.vscode/
+.idea/
+
+# Confidential ad raw data
+data/apsl/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Env & secrets (if used)
+.env
+.env.*
