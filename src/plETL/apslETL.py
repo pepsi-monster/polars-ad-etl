@@ -216,9 +216,10 @@ if __name__ == "__main__":
         level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s: %(message)s"
     )
 
-    file_path = Path(__file__).parent.parent / "data" / "raw" / "podl"
+    raw_dir = Path(__file__).parent.parent.parent / "data" / "apsl" / "raw" / "podl"
+    proc_dir = Path(__file__).parent.parent.parent / "data" / "apsl" / "proc"
 
-    podl = apslETL(file_path)
+    podl = apslETL(raw_dir)
 
     merged = (
         podl.read_tabular_files()
@@ -231,8 +232,6 @@ if __name__ == "__main__":
         )
         .merge_and_collect()
     )
-    file_name = podl.construct_file_name(podl, merged)
-    out = file_path.parent.parent / "processed" / file_name
-
-    logging.info(f"Exported to: {out}")
-    merged.write_csv(out, include_bom=True)
+    out = proc_dir / podl.construct_file_name("podl", merged)
+    logging.info(f"Exported to {out}")
+    merged.write_csv(out)
