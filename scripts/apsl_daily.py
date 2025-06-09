@@ -237,7 +237,6 @@ kahi = apslETL(kahi_raw_dir)
 refa = apslETL(refa_raw_dir)
 kcon = apslETL(kcon_raw_dir)
 
-
 toomics_merged = (
     toomics.read_tabular_files()
     .assign_source()
@@ -278,6 +277,12 @@ kahi_merged = (
 
 kahi_out = kahi.construct_file_name("kahi", kahi_merged)
 
+refa_campaign_mapping = {
+    "[ROAS] ASC_250108_ Product Mix_camp": "[MIX] ASC_250108_ Product Mix_camp",
+    "[ROAS] ASC_250117 video camp 캠페인": "[M1] ASC_250117 video camp 캠페인",
+    "[ROAS] ASC_New year Promotion_250109_camp 캠페인": "[M1] ASC_New year Promotion_250109_camp 캠페인",
+}
+
 refa_merged = (
     refa.read_tabular_files()
     .assign_source()
@@ -286,7 +291,7 @@ refa_merged = (
         meta_mapping=refa_meta_mapping,
     )
     .merge_and_collect()
-)
+).with_columns(pl.col("캠페인 명").replace(refa_campaign_mapping).alias("캠페인 명"))
 
 refa_out = refa.construct_file_name("refa", refa_merged)
 
@@ -297,6 +302,7 @@ daily_exports = {
     "kahi": {"df": kahi_merged, "out": kahi_out},
     "refa": {"df": refa_merged, "out": refa_out},
 }
+
 for client, v in daily_exports.items():
     df: pl.DataFrame = v["df"]
     out = processed_dir / v["out"]
