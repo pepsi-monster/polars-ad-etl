@@ -10,8 +10,5 @@ dependencies = [
     "polars>=1.30.0",
 ]
 
-[tool.uv]
-editable = true
-
 [tool.setuptools.packages.find]
 where = ["src"]
