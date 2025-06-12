@@ -22,5 +22,5 @@ test/
 
 # Env & secrets (if used)
 .env
-.env.
+.env.*
 gcloud_credential.json

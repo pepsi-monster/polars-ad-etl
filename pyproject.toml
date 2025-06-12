@@ -6,8 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastexcel>=0.14.0",
+    "google-auth>=2.40.3",
+    "gspread>=6.2.1",
     "jupyter>=1.1.1",
     "polars>=1.30.0",
+    "yaspin>=3.1.0",
 ]
 
 [tool.setuptools.packages.find]

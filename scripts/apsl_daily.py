@@ -1,7 +1,15 @@
 from pathlib import Path
 from plETL.apslETL import apslETL
+from plETL.apslETL import upload_df_to_gs, df_to_a1_range
 import logging
 import polars as pl
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
 toomics_raw_dir = apsl_dir / "raw" / "toomics"
@@ -36,7 +44,6 @@ toomics_schema = {
     "Source": pl.String,
     "Day": pl.Date,
     "Campaign name": pl.String,
-    "Ad Set Name": pl.String,
     "Ad name": pl.String,
     "Age": pl.String,
     "Gender": pl.String,
@@ -105,6 +112,7 @@ podl_standard_schema = {
     "Ad name": pl.String,
     "Gender": pl.String,
     "Age": pl.String,
+    "Website URL": pl.String,
     "Amount spent (USD)": pl.Float64,
     "Impressions": pl.Int64,
     "Frequency": pl.Float64,
@@ -224,6 +232,135 @@ refa_standard_schema = {
     "동영상 100% 재생": pl.Int64,
 }
 
+kcon_meta_mapping = {
+    "Day": "Day",
+    "Campaign name": "Campaign name",
+    "Ad Set Name": "Ad Set Name",
+    "Ad name": "Ad name",
+    "Gender": "Gender",
+    "Age": "Age",
+    "Amount spent (KRW)": "Amount spent (Raw)",
+    "Currency": "Currency",
+    "Impressions": "Impressions",
+    "Clicks (all)": "Clicks (all)",
+    "Link clicks": "Link clicks",
+}
+
+kcon_tiktok_mapping = {
+    "By Day": "Day",
+    "Campaign name": "Campaign name",
+    "Ad group name": "Ad Set Name",
+    "Ad name": "Ad name",
+    "Gender": "Gender",
+    "Age": "Age",
+    "Cost": "Amount spent (Raw)",
+    "Currency": "Currency",
+    "Impressions": "Impressions",
+    "Clicks (all)": "Clicks (all)",
+    "Clicks (destination)": "Link clicks",
+}
+
+kcon_x_mapping = {
+    "Time period": "Day",
+    "Campaign name": "Campaign name",
+    "Ad Group name": "Ad Set Name",
+    "Ad name": "Ad name",
+    "Spend": "Amount spent (Raw)",
+    "Currency": "Currency",
+    "Impressions": "Impressions",
+    "Clicks": "Clicks (all)",
+    "Link clicks": "Link clicks",
+}
+
+# Standardized schema for all data sources
+kcon_standard_schema = {
+    "Source": pl.String,
+    "Day": pl.Date,
+    "Campaign name": pl.String,
+    "Ad Set Name": pl.String,
+    "Ad name": pl.String,
+    "Age": pl.String,
+    "Gender": pl.String,
+    "Amount spent (Raw)": pl.String,
+    "Currency": pl.String,
+    "Impressions": pl.Int64,
+    "Clicks (all)": pl.Int64,
+    "Link clicks": pl.Int64,
+}
+
+dfs = []
+for f in toomics_raw_dir.glob("*.csv"):
+    # 1) extract “Meta”, “X”, “TikTok”, etc.
+    src = f.stem.split("_", 1)[0]
+    # 2) read the CSV once
+    df = pl.read_csv(f, infer_schema_length=0)
+    # 3) tag with Source
+    df = df.with_columns(pl.lit(src).alias("Source"))
+    # 4) move Source to be the first column
+    df = df.select(["Source"] + [c for c in df.columns if c != "Source"])
+    dfs.append(df)
+
+# 1) Separate into two lists by source
+# 1) Separate into two lists by source
+meta_frames = [df for df in dfs if df["Source"][0] == "Meta"]
+x_frames = [df for df in dfs if df["Source"][0] == "X (Twitter)"]
+
+# 2) Combine all Meta frames as-is
+meta_combined: pl.DataFrame = pl.concat(meta_frames)
+x_combined: pl.DataFrame = pl.concat(x_frames)
+
+meta_cols = meta_combined.columns
+missing = [col for col in meta_cols if col not in x_combined.columns]
+
+x_combined = x_combined.with_columns(
+    [
+        pl.lit(None).alias(col)  # <-- one alias per column
+        for col in missing
+    ]
+).select(meta_cols)
+
+toomics_merged = pl.concat([meta_combined, x_combined])
+
+toomics_merged = toomics_merged.with_columns(
+    [
+        pl.col("Spent")
+        .str.replace_all("￦", "")
+        .str.replace_all(",", "")
+        .cast(pl.Float64)
+        .alias("Spent"),
+        pl.col("Impression")
+        .str.replace_all(",", "")
+        .cast(pl.Int64)
+        .alias("Impression"),
+        pl.col("Click").str.replace_all(",", "").cast(pl.Int64).alias("Click"),
+        pl.col("First purchase")
+        .str.replace_all(",", "")
+        .str.replace_all('"', "")
+        .cast(pl.Int64)
+        .alias("First purchase"),
+        pl.col("Purchase")
+        .str.replace_all(",", "")
+        .str.replace_all('"', "")
+        .cast(pl.Int64)
+        .alias("Purchase"),
+        pl.col("First purchase")
+        .str.replace_all('"', "")
+        .cast(pl.Int64)
+        .alias("Registration"),
+        pl.col("Purchase value")
+        .str.replace_all("￦", "")
+        .str.replace_all(",", "")
+        .cast(pl.Float64)
+        .alias("Purchase value"),
+        pl.col("First purchase value")
+        .str.replace_all("￦", "")
+        .str.replace_all(",", "")
+        .cast(pl.Float64)
+        .alias("First purchase value"),
+        pl.col("Date").cast(pl.Date),
+    ]
+)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
@@ -231,25 +368,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+min_date = toomics_merged.select(pl.col("Date").min()).item()
+max_date = toomics_merged.select(pl.col("Date").max()).item()
+
+toomics_out = processed_dir / f"toomics_v2_{min_date}–{max_date}.csv"
+
+logger.info(f"Exported to: {toomics_out}")
+
 toomics = apslETL(toomics_raw_dir)
 podl = apslETL(podl_raw_dir)
 kahi = apslETL(kahi_raw_dir)
 refa = apslETL(refa_raw_dir)
 kcon = apslETL(kcon_raw_dir)
-
-toomics_merged = (
-    toomics.read_tabular_files()
-    .assign_source()
-    .clean_x_avg_frequency()
-    .standardize(
-        standard_schema=toomics_schema,
-        meta_mapping=toomics_meta_mapping,
-        x_mapping=toomics_x_mapping,
-    )
-    .merge_and_collect()
-)
-
-toomics_out = toomics.construct_file_name("toomics", toomics_merged)
 
 podl_merged = (
     podl.read_tabular_files()
@@ -295,16 +426,72 @@ refa_merged = (
 
 refa_out = refa.construct_file_name("refa", refa_merged)
 
-daily_exports = {}
+kcon_merged = (
+    kcon.read_tabular_files()
+    .assign_source()
+    .clean_tiktok_remove_total()
+    .standardize(
+        standard_schema=kcon_standard_schema,
+        meta_mapping=kcon_meta_mapping,
+        tiktok_mapping=kcon_tiktok_mapping,
+        x_mapping=kcon_x_mapping,
+    )
+    .merge_and_collect()
+)
+
+kcon_out = kcon.construct_file_name("kcon", kcon_merged)
+
 daily_exports = {
-    "toomics": {"df": toomics_merged, "out": toomics_out},
-    "podl": {"df": podl_merged, "out": podl_out},
-    "kahi": {"df": kahi_merged, "out": kahi_out},
-    "refa": {"df": refa_merged, "out": refa_out},
+    "toomics": {
+        "df": toomics_merged,
+        "out": toomics_out,
+        "sheet_key": "1JCl7-oZWUeGJwF87ggARxlxK8StAaKCFlu7CTfe1MXs",
+        "sheet_name": "raw",
+        "a1_range": df_to_a1_range(
+            df=toomics_merged, vertical_offset=1, horizontal_offset=2
+        ),
+    },
+    "podl": {
+        "df": podl_merged,
+        "out": podl_out,
+        "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
+        "sheet_name": "raw",
+        "a1_range": df_to_a1_range(podl_merged),
+    },
+    "kahi": {
+        "df": kahi_merged,
+        "out": kahi_out,
+        "sheet_key": "12RBMaBfwqGYTx0H_Gn2VfDyDDu5-1JIjbqiNk2ZtBZA",
+        "sheet_name": "raw",
+        "a1_range": df_to_a1_range(kahi_merged),
+    },
+    "refa": {
+        "df": refa_merged,
+        "out": refa_out,
+        "sheet_key": "19yc-6IIgh7UyFx2jepIFnSHiiGLr0if0nonr76kgHv8",
+        "sheet_name": "raw",
+        "a1_range": df_to_a1_range(refa_merged),
+    },
+    "kcon": {
+        "df": kcon_merged,
+        "out": kcon_out,
+        "sheet_key": "12i4X3467bxW7Nc59ar3LsJ3tvdXD7nzFwxsLteB1bzY",
+        "sheet_name": "raw",
+        "a1_range": df_to_a1_range(kcon_merged),
+    },
 }
 
-for client, v in daily_exports.items():
+for k, v in daily_exports.items():
+    # Exported merged csvs to the computer
     df: pl.DataFrame = v["df"]
     out = processed_dir / v["out"]
-    logger.info(f"{client} exported to {out}")
+    logger.info(f"{k} exported to {out}")
     df.write_csv(out, include_bom=True)
+
+    # Upload df to the computer
+    upload_df_to_gs(
+        df=v["df"],
+        sheet_key=v["sheet_key"],
+        sheet_name=v["sheet_name"],
+        a1_range=df_to_a1_range(v["df"]),
+    )
