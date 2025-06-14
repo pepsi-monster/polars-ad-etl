@@ -1,7 +1,7 @@
 from pathlib import Path
-from multi_source_ad_etl import MultiSourceAdETL
-from google_cloud_client import GoogleCloudClient as gcc
-import utils as ut
+from multi_source_ad_etl.multi_source_ad_etl import MultiSourceAdETL
+from google_cloud_client.google_cloud_client import GoogleCloudClient as gcc
+import utils.utils as ut
 import logging
 import polars as pl
 
