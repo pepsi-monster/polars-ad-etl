@@ -1,6 +1,7 @@
 from pathlib import Path
-from plETL.apslETL import apslETL
-from plETL.apslETL import upload_df_to_gs, df_to_a1_range
+from multi_source_ad_etl import MultiSourceAdETL
+from google_cloud_client import GoogleCloudClient as gcc
+import utils as ut
 import logging
 import polars as pl
 
@@ -281,7 +282,7 @@ kcon_standard_schema = {
     "Ad name": pl.String,
     "Age": pl.String,
     "Gender": pl.String,
-    "Amount spent (Raw)": pl.String,
+    "Amount spent (Raw)": pl.Float64,
     "Currency": pl.String,
     "Impressions": pl.Int64,
     "Clicks (all)": pl.Int64,
@@ -300,7 +301,6 @@ for f in toomics_raw_dir.glob("*.csv"):
     df = df.select(["Source"] + [c for c in df.columns if c != "Source"])
     dfs.append(df)
 
-# 1) Separate into two lists by source
 # 1) Separate into two lists by source
 meta_frames = [df for df in dfs if df["Source"][0] == "Meta"]
 x_frames = [df for df in dfs if df["Source"][0] == "X (Twitter)"]
@@ -376,11 +376,11 @@ toomics_out = processed_dir / f"toomics_v2_{min_date}–{max_date}.csv"
 
 logger.info(f"Exported to: {toomics_out}")
 
-toomics = apslETL(toomics_raw_dir)
-podl = apslETL(podl_raw_dir)
-kahi = apslETL(kahi_raw_dir)
-refa = apslETL(refa_raw_dir)
-kcon = apslETL(kcon_raw_dir)
+toomics = MultiSourceAdETL(toomics_raw_dir)
+podl = MultiSourceAdETL(podl_raw_dir)
+kahi = MultiSourceAdETL(kahi_raw_dir)
+refa = MultiSourceAdETL(refa_raw_dir)
+kcon = MultiSourceAdETL(kcon_raw_dir)
 
 podl_merged = (
     podl.read_tabular_files()
@@ -439,7 +439,14 @@ kcon_merged = (
     .merge_and_collect()
 )
 
+gcc()
+
 kcon_out = kcon.construct_file_name("kcon", kcon_merged)
+
+# Initializing and setting up Google Cloud service's gspread
+gcloud_credential = Path("/Users/johnny/repos/polars-analytics/gcloud_credential.json")
+
+gs = gcc(gcloud_credential).googlesheet
 
 daily_exports = {
     "toomics": {
@@ -447,7 +454,7 @@ daily_exports = {
         "out": toomics_out,
         "sheet_key": "1JCl7-oZWUeGJwF87ggARxlxK8StAaKCFlu7CTfe1MXs",
         "sheet_name": "raw",
-        "a1_range": df_to_a1_range(
+        "a1_range": ut.dataframe_to_a1_address(
             df=toomics_merged, vertical_offset=1, horizontal_offset=2
         ),
     },
@@ -456,28 +463,28 @@ daily_exports = {
         "out": podl_out,
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
         "sheet_name": "raw",
-        "a1_range": df_to_a1_range(podl_merged),
+        "a1_range": ut.dataframe_to_a1_address(podl_merged),
     },
     "kahi": {
         "df": kahi_merged,
         "out": kahi_out,
         "sheet_key": "12RBMaBfwqGYTx0H_Gn2VfDyDDu5-1JIjbqiNk2ZtBZA",
         "sheet_name": "raw",
-        "a1_range": df_to_a1_range(kahi_merged),
+        "a1_range": ut.dataframe_to_a1_address(kahi_merged),
     },
     "refa": {
         "df": refa_merged,
         "out": refa_out,
         "sheet_key": "19yc-6IIgh7UyFx2jepIFnSHiiGLr0if0nonr76kgHv8",
         "sheet_name": "raw",
-        "a1_range": df_to_a1_range(refa_merged),
+        "a1_range": ut.dataframe_to_a1_address(refa_merged),
     },
     "kcon": {
         "df": kcon_merged,
         "out": kcon_out,
         "sheet_key": "12i4X3467bxW7Nc59ar3LsJ3tvdXD7nzFwxsLteB1bzY",
         "sheet_name": "raw",
-        "a1_range": df_to_a1_range(kcon_merged),
+        "a1_range": ut.dataframe_to_a1_address(kcon_merged),
     },
 }
 
@@ -488,10 +495,10 @@ for k, v in daily_exports.items():
     logger.info(f"{k} exported to {out}")
     df.write_csv(out, include_bom=True)
 
-    # Upload df to the computer
-    upload_df_to_gs(
-        df=v["df"],
-        sheet_key=v["sheet_key"],
-        sheet_name=v["sheet_name"],
-        a1_range=df_to_a1_range(v["df"]),
-    )
+# Upload df to the sheet
+gs.upload_dataframe(
+    df=v["df"],
+    sheet_key=v["sheet_key"],
+    sheet_name=v["sheet_name"],
+    a1_range=v["a1_range"],
+)
