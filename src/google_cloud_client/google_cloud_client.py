@@ -20,7 +20,11 @@ class GoogleCloudClient:
                 "https://www.googleapis.com/auth/drive",
             ]
         """
-        self.scopes = scopes
+        self.scopes = scopes or [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ]
+        self.service_account_json = service_account_json
 
         try:
             self.creds = Credentials.from_service_account_file(

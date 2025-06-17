@@ -289,93 +289,6 @@ kcon_standard_schema = {
     "Link clicks": pl.Int64,
 }
 
-dfs = []
-for f in toomics_raw_dir.glob("*.csv"):
-    # 1) extract “Meta”, “X”, “TikTok”, etc.
-    src = f.stem.split("_", 1)[0]
-    # 2) read the CSV once
-    df = pl.read_csv(f, infer_schema_length=0)
-    # 3) tag with Source
-    df = df.with_columns(pl.lit(src).alias("Source"))
-    # 4) move Source to be the first column
-    df = df.select(["Source"] + [c for c in df.columns if c != "Source"])
-    dfs.append(df)
-
-# 1) Separate into two lists by source
-meta_frames = [df for df in dfs if df["Source"][0] == "Meta"]
-x_frames = [df for df in dfs if df["Source"][0] == "X (Twitter)"]
-
-# 2) Combine all Meta frames as-is
-meta_combined: pl.DataFrame = pl.concat(meta_frames)
-x_combined: pl.DataFrame = pl.concat(x_frames)
-
-meta_cols = meta_combined.columns
-missing = [col for col in meta_cols if col not in x_combined.columns]
-
-x_combined = x_combined.with_columns(
-    [
-        pl.lit(None).alias(col)  # <-- one alias per column
-        for col in missing
-    ]
-).select(meta_cols)
-
-toomics_merged = pl.concat([meta_combined, x_combined])
-
-toomics_merged = toomics_merged.with_columns(
-    [
-        pl.col("Spent")
-        .str.replace_all("￦", "")
-        .str.replace_all(",", "")
-        .cast(pl.Float64)
-        .alias("Spent"),
-        pl.col("Impression")
-        .str.replace_all(",", "")
-        .cast(pl.Int64)
-        .alias("Impression"),
-        pl.col("Click").str.replace_all(",", "").cast(pl.Int64).alias("Click"),
-        pl.col("First purchase")
-        .str.replace_all(",", "")
-        .str.replace_all('"', "")
-        .cast(pl.Int64)
-        .alias("First purchase"),
-        pl.col("Purchase")
-        .str.replace_all(",", "")
-        .str.replace_all('"', "")
-        .cast(pl.Int64)
-        .alias("Purchase"),
-        pl.col("First purchase")
-        .str.replace_all('"', "")
-        .cast(pl.Int64)
-        .alias("Registration"),
-        pl.col("Purchase value")
-        .str.replace_all("￦", "")
-        .str.replace_all(",", "")
-        .cast(pl.Float64)
-        .alias("Purchase value"),
-        pl.col("First purchase value")
-        .str.replace_all("￦", "")
-        .str.replace_all(",", "")
-        .cast(pl.Float64)
-        .alias("First purchase value"),
-        pl.col("Date").cast(pl.Date),
-    ]
-)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(name)s %(levelname)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
-
-min_date = toomics_merged.select(pl.col("Date").min()).item()
-max_date = toomics_merged.select(pl.col("Date").max()).item()
-
-toomics_out = processed_dir / f"toomics_v2_{min_date}–{max_date}.csv"
-
-logger.info(f"Exported to: {toomics_out}")
-
 toomics = MultiSourceAdETL(toomics_raw_dir)
 podl = MultiSourceAdETL(podl_raw_dir)
 kahi = MultiSourceAdETL(kahi_raw_dir)
@@ -439,8 +352,6 @@ kcon_merged = (
     .merge_and_collect()
 )
 
-gcc()
-
 kcon_out = kcon.construct_file_name("kcon", kcon_merged)
 
 # Initializing and setting up Google Cloud service's gspread
@@ -449,15 +360,6 @@ gcloud_credential = Path("/Users/johnny/repos/polars-analytics/gcloud_credential
 gs = gcc(gcloud_credential).googlesheet
 
 daily_exports = {
-    "toomics": {
-        "df": toomics_merged,
-        "out": toomics_out,
-        "sheet_key": "1JCl7-oZWUeGJwF87ggARxlxK8StAaKCFlu7CTfe1MXs",
-        "sheet_name": "raw",
-        "a1_range": ut.dataframe_to_a1_address(
-            df=toomics_merged, vertical_offset=1, horizontal_offset=2
-        ),
-    },
     "podl": {
         "df": podl_merged,
         "out": podl_out,
@@ -494,11 +396,10 @@ for k, v in daily_exports.items():
     out = processed_dir / v["out"]
     logger.info(f"{k} exported to {out}")
     df.write_csv(out, include_bom=True)
-
-# Upload df to the sheet
-gs.upload_dataframe(
-    df=v["df"],
-    sheet_key=v["sheet_key"],
-    sheet_name=v["sheet_name"],
-    a1_range=v["a1_range"],
-)
+    # Upload df to the sheet
+    gs.upload_dataframe(
+        df=v["df"],
+        sheet_key=v["sheet_key"],
+        sheet_name=v["sheet_name"],
+        range=v["a1_range"],
+    )
