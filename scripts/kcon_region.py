@@ -7,16 +7,11 @@ from google_cloud_client.google_cloud_client import GoogleCloudClient as gcc
 
 pio.renderers.default = "browser"
 
-file_path = (
-    Path(__file__).parent.parent
-    / "data"
-    / "apsl"
-    / "raw"
-    / "kcon_region"
-    / "KCON-JPN-USA_region_250611-Mar-1-2025-Jun-15-2025.csv"
-)
+raw_dir = Path(__file__).parent.parent / "data" / "apsl" / "raw" / "kcon_region"
 
-df = pl.read_csv(file_path, infer_schema_length=None)
+file_path = [f for f in raw_dir.glob("*.csv")]
+
+df = pl.read_csv(file_path[0], infer_schema_length=None)
 
 
 df_schema = {

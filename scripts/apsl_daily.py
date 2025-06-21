@@ -13,52 +13,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
-toomics_raw_dir = apsl_dir / "raw" / "toomics"
 podl_raw_dir = apsl_dir / "raw" / "podl"
-kahi_raw_dir = apsl_dir / "raw" / "kahi"
-refa_raw_dir = apsl_dir / "raw" / "refa"
 kcon_raw_dir = apsl_dir / "raw" / "kcon"
 processed_dir = apsl_dir / "proc"
-
-toomics_meta_mapping = {
-    "FirstPurchase": "First purchases",
-    "FirstPurchase_duplicated_0": "First purchases conversion value",
-}
-
-toomics_x_mapping = {
-    "Time period": "Day",
-    "Ad Group name": "Ad Set Name",
-    "Campaign name": "Campaign name",
-    "Average frequency": "Frequency",
-    "Spend": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Clicks": "Clicks (all)",
-    "Link clicks": "Link clicks",
-    "Leads": "Registrations Completed",
-    "Purchases": "Purchases",
-    "Purchases - sale amount": "Purchases conversion value",
-    "Custom events": "First purchases",
-    "Custom events - sale amount": "First purchases conversion value",
-}
-
-toomics_schema = {
-    "Source": pl.String,
-    "Day": pl.Date,
-    "Campaign name": pl.String,
-    "Ad name": pl.String,
-    "Age": pl.String,
-    "Gender": pl.String,
-    "Amount spent (USD)": pl.Float64,
-    "Impressions": pl.Int64,
-    "Clicks (all)": pl.Int64,
-    "Link clicks": pl.Int64,
-    "Frequency": pl.Float64,
-    "Registrations Completed": pl.Int64,
-    "Purchases": pl.Int64,
-    "Purchases conversion value": pl.Float64,
-    "First purchases": pl.Int64,
-    "First purchases conversion value": pl.Float64,
-}
 
 podl_meta_mapping = {
     "Day": "Day",
@@ -131,108 +88,6 @@ podl_standard_schema = {
     "Purchases conversion value": pl.Float64,
 }
 
-kahi_meta_mapping = {
-    "Day": "날짜",
-    "Campaign name": "캠페인 명",
-    "Ad Set Name": "광고 세트 명",
-    "Ad name": "광고 명",
-    "Gender": "성별",
-    "Age": "연령",
-    "Link (ad settings)": "링크(광고 설정)",
-    "Amount spent (USD)": "지출 금액",
-    "Impressions": "노출",
-    "Frequency": "빈도",
-    "Reach": "도달",
-    "Clicks (all)": "클릭(전체)",
-    "Link clicks": "링크 클릭",
-    "Adds to cart": "장바구니에 담기",
-    "Checkouts Initiated": "결제 시작",
-    "Purchases": "구매",
-    "Purchases conversion value": "구매 전환 값",
-    "Video plays": "동영상 전체 재생",
-    "Video plays at 25%": "동영상 25% 이상 재생",
-    "Video plays at 50%": "동영상 50% 이상 재생",
-    "Video plays at 75%": "동영상 75% 이상 재생",
-    "Video plays at 100%": "동영상 100% 재생",
-}
-
-kahi_standard_schema = {
-    "Source": pl.String,
-    "날짜": pl.Date,
-    "캠페인 명": pl.String,
-    "광고 세트 명": pl.String,
-    "광고 명": pl.String,
-    "성별": pl.String,
-    "연령": pl.String,
-    "링크(광고 설정)": pl.String,
-    "지출 금액": pl.Float64,
-    "노출": pl.Int64,
-    "빈도": pl.Float64,
-    "도달": pl.Int64,
-    "클릭(전체)": pl.Int64,
-    "링크 클릭": pl.Int64,
-    "장바구니에 담기": pl.Int64,
-    "결제 시작": pl.Int64,
-    "구매": pl.Int64,
-    "구매 전환 값": pl.Float64,
-    "동영상 전체 재생": pl.Int64,
-    "동영상 25% 이상 재생": pl.Int64,
-    "동영상 50% 이상 재생": pl.Int64,
-    "동영상 75% 이상 재생": pl.Int64,
-    "동영상 100% 재생": pl.Int64,
-}
-
-refa_meta_mapping = {
-    "Day": "날짜",
-    "Campaign name": "캠페인 명",
-    "Ad Set Name": "광고 세트 명",
-    "Ad name": "광고 명",
-    "Gender": "성별",
-    "Age": "연령",
-    "Link (ad settings)": "링크(광고 설정)",
-    "Amount spent (USD)": "지출 금액",
-    "Impressions": "노출",
-    "Frequency": "빈도",
-    "Reach": "도달",
-    "Clicks (all)": "클릭(전체)",
-    "Link clicks": "링크 클릭",
-    "Adds to cart": "장바구니에 담기",
-    "Checkouts Initiated": "결제 시작",
-    "Purchases": "구매",
-    "Purchases conversion value": "구매 전환 값",
-    "Video plays": "동영상 전체 재생",
-    "Video plays at 25%": "동영상 25% 이상 재생",
-    "Video plays at 50%": "동영상 50% 이상 재생",
-    "Video plays at 75%": "동영상 75% 이상 재생",
-    "Video plays at 100%": "동영상 100% 재생",
-}
-
-refa_standard_schema = {
-    "Source": pl.String,
-    "날짜": pl.Date,
-    "캠페인 명": pl.String,
-    "광고 세트 명": pl.String,
-    "광고 명": pl.String,
-    "성별": pl.String,
-    "연령": pl.String,
-    "링크(광고 설정)": pl.String,
-    "지출 금액": pl.Float64,
-    "노출": pl.Int64,
-    "빈도": pl.Float64,
-    "도달": pl.Int64,
-    "클릭(전체)": pl.Int64,
-    "링크 클릭": pl.Int64,
-    "장바구니에 담기": pl.Int64,
-    "결제 시작": pl.Int64,
-    "구매": pl.Int64,
-    "구매 전환 값": pl.Float64,
-    "동영상 전체 재생": pl.Int64,
-    "동영상 25% 이상 재생": pl.Int64,
-    "동영상 50% 이상 재생": pl.Int64,
-    "동영상 75% 이상 재생": pl.Int64,
-    "동영상 100% 재생": pl.Int64,
-}
-
 kcon_meta_mapping = {
     "Day": "Day",
     "Campaign name": "Campaign name",
@@ -289,10 +144,7 @@ kcon_standard_schema = {
     "Link clicks": pl.Int64,
 }
 
-toomics = MultiSourceAdETL(toomics_raw_dir)
 podl = MultiSourceAdETL(podl_raw_dir)
-kahi = MultiSourceAdETL(kahi_raw_dir)
-refa = MultiSourceAdETL(refa_raw_dir)
 kcon = MultiSourceAdETL(kcon_raw_dir)
 
 podl_merged = (
@@ -308,36 +160,6 @@ podl_merged = (
 )
 
 podl_out = podl.construct_file_name("podl", podl_merged)
-
-kahi_merged = (
-    kahi.read_tabular_files()
-    .assign_source()
-    .standardize(
-        standard_schema=kahi_standard_schema,
-        meta_mapping=kahi_meta_mapping,
-    )
-    .merge_and_collect()
-)
-
-kahi_out = kahi.construct_file_name("kahi", kahi_merged)
-
-refa_campaign_mapping = {
-    "[ROAS] ASC_250108_ Product Mix_camp": "[MIX] ASC_250108_ Product Mix_camp",
-    "[ROAS] ASC_250117 video camp 캠페인": "[M1] ASC_250117 video camp 캠페인",
-    "[ROAS] ASC_New year Promotion_250109_camp 캠페인": "[M1] ASC_New year Promotion_250109_camp 캠페인",
-}
-
-refa_merged = (
-    refa.read_tabular_files()
-    .assign_source()
-    .standardize(
-        standard_schema=refa_standard_schema,
-        meta_mapping=refa_meta_mapping,
-    )
-    .merge_and_collect()
-).with_columns(pl.col("캠페인 명").replace(refa_campaign_mapping).alias("캠페인 명"))
-
-refa_out = refa.construct_file_name("refa", refa_merged)
 
 kcon_merged = (
     kcon.read_tabular_files()
@@ -366,20 +188,6 @@ daily_exports = {
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
         "sheet_name": "raw",
         "a1_range": ut.dataframe_to_a1_address(podl_merged),
-    },
-    "kahi": {
-        "df": kahi_merged,
-        "out": kahi_out,
-        "sheet_key": "12RBMaBfwqGYTx0H_Gn2VfDyDDu5-1JIjbqiNk2ZtBZA",
-        "sheet_name": "raw",
-        "a1_range": ut.dataframe_to_a1_address(kahi_merged),
-    },
-    "refa": {
-        "df": refa_merged,
-        "out": refa_out,
-        "sheet_key": "19yc-6IIgh7UyFx2jepIFnSHiiGLr0if0nonr76kgHv8",
-        "sheet_name": "raw",
-        "a1_range": ut.dataframe_to_a1_address(refa_merged),
     },
     "kcon": {
         "df": kcon_merged,
