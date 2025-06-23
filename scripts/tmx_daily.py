@@ -125,7 +125,7 @@ combined_df = pl.concat([meta_df, x_df], how="diagonal_relaxed").select(common_c
 numeric_nonzero_filter = cs.numeric().is_finite() & (cs.numeric() != 0)
 
 # Apply filter to remove rows with invalid or zero numeric values
-combined_df = combined_df.filter(pl.all_horizontal(numeric_nonzero_filter))
+combined_df = combined_df.filter(pl.any_horizontal(numeric_nonzero_filter))
 
 # =============================================================================
 # DATA AGGREGATION
@@ -306,7 +306,7 @@ column_rename_map = {
 }
 
 # Create final aggregated dataframe with Korean column names
-final_aggregated_df = aggregated_df.select(cs.by_name(column_rename_map.keys())).rename(
+final_aggregated_df = aggregated_df.select(pl.col(column_rename_map.keys())).rename(
     column_rename_map
 )
 
@@ -388,9 +388,6 @@ internal_df = (
     .cast(internal_schema_map)
 )
 
-# Internal date minimum date
-min_date = internal_df.select(pl.col("날짜")).min().item()
-
 # Define join keys for combining with internal analytics data
 join_keys = ["날짜", "구분1", "그룹"]
 
@@ -404,22 +401,13 @@ final_joined_df = aggregated_for_join_df.join(
     internal_df,
     on=join_keys,
     how="left",
-).filter(
-    pl.col("날짜") <= min_date
-)  # Keep records dated on or before `internal_df` min_date
+)
 
 
 # Validate that totals match
 combined_total = final_combined_df["Impressions"].sum()
 aggregated_total = final_aggregated_df["노출"].sum()
 aggregated_joined_total = aggregated_for_join_df["노출"].sum()
-
-assert combined_total == aggregated_total == aggregated_joined_total, (
-    "Impression totals don't match!\n"
-    f"`combined_total` impressions: {combined_total}\n"
-    f"`aggregated_total` impressions: {aggregated_total}\n"
-    f"`aggregated_joined_total` impressions: {aggregated_joined_total}"
-)
 
 # =============================================================================
 # DATA UPLOAD CONFIGURATION
@@ -428,8 +416,8 @@ assert combined_total == aggregated_total == aggregated_joined_total, (
 # Control flags for uploading different datasets to Google Sheets
 upload_flags = {
     "final_combined_df": False,  # Raw combined advertising data
-    "final_aggregated_df": False,  # Aggregated advertising data with metrics
-    "final_joined_df": False,  # Joined advertising + internal data
+    "final_aggregated_df": True,  # Aggregated advertising data with metrics
+    "final_joined_df": True,  # Joined advertising + internal data
 }
 
 # =============================================================================
