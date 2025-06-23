@@ -352,15 +352,6 @@ final_combined_df = (
 # INTERNAL DATA INTEGRATION
 # =============================================================================
 
-# Define join keys for combining with internal analytics data
-join_keys = ["날짜", "구분1", "그룹"]
-
-# Aggregate advertising data for joining with internal data
-aggregated_for_join_df = final_aggregated_df.group_by(join_keys).agg(
-    (cs.numeric().exclude(metric_names)).sum()
-)
-
-
 # Define schema for internal analytics data from Google Sheets
 internal_schema_map = {
     "날짜": pl.Date,
@@ -396,19 +387,38 @@ internal_df = (
     .cast(internal_schema_map)
 )
 
+# Internal date minimum date
+min_date = internal_df.select(pl.col("날짜")).min().item()
+
+# Define join keys for combining with internal analytics data
+join_keys = ["날짜", "구분1", "그룹"]
+
+# Aggregate advertising data for joining with internal data
+aggregated_for_join_df = final_aggregated_df.group_by(join_keys).agg(
+    (cs.numeric().exclude(metric_names)).sum()
+)
+
 # Join advertising data with internal analytics data
-final_joined_df = aggregated_for_join_df.join(internal_df, on=join_keys, how="left")
+final_joined_df = aggregated_for_join_df.join(
+    internal_df,
+    on=join_keys,
+    how="left",
+).filter(
+    pl.col("날짜") <= min_date
+)  # Keep records dated on or before `internal_df` min_date
 
 
 # Validate that totals match
 combined_total = final_combined_df["Impressions"].sum()
 aggregated_total = final_aggregated_df["노출"].sum()
-joined_total = final_joined_df["노출"].sum()
+aggregated_joined_total = aggregated_for_join_df["노출"].sum()
 
-assert combined_total == aggregated_total == joined_total, (
-    "Impression totals don't match!"
+assert combined_total == aggregated_total == aggregated_joined_total, (
+    "Impression totals don't match!\n"
+    f"`combined_total` impressions: {combined_total}\n"
+    f"`aggregated_total` impressions: {aggregated_total}\n"
+    f"`aggregated_joined_total` impressions: {aggregated_joined_total}"
 )
-
 
 # =============================================================================
 # DATA UPLOAD CONFIGURATION
