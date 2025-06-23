@@ -16,7 +16,7 @@ Main functions:
 7. Upload processed data to Google Sheets
 
 Author: JungHwan Noh
-Last Updated: 2025-06-21
+Last Updated: 2025-06-23
 """
 
 import polars as pl
