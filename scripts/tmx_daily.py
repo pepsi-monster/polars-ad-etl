@@ -233,8 +233,9 @@ adset_group_map = {
     "PUR_CAPI_M_LAL5%_Reg 180D_250311": "앱실론_유사타겟",
     # Retargeting campaigns (리타겟팅)
     "PUR_CAPI_A_DIR_Visitors 7D_240819": "앱실론_리타겟팅",
-    "PUR_HYBRID_A_DIR_Pur 180D&360D_250311": "앱실론_리타겟팅",
     "PUR_HYBRID_A_DIR_Pur 180D&365D_240816": "앱실론_리타겟팅",
+    "PUR_HYBRID_A_DIR_Pur 180D&360D_250311": "앱실론_리타겟팅",
+    "PUR_HYBRID_A_DIR_Pur 180D&360D_250623": "앱실론_리타겟팅",
     # Value optimization campaigns (가치최적화)
     "PUR_META_AUTO_ASC_Mature Adult_241226": "앱실론_가치최적화",
     "PUR_META_AUTO_ASC_Young Adult_240801": "앱실론_가치최적화",
