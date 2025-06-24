@@ -183,6 +183,7 @@ gs = gcc(gcloud_credential).googlesheet
 
 daily_exports = {
     "podl": {
+        "upload": True,
         "df": podl_merged,
         "out": podl_out,
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
@@ -190,6 +191,7 @@ daily_exports = {
         "a1_range": ut.dataframe_to_a1_address(podl_merged),
     },
     "kcon": {
+        "upload": False,
         "df": kcon_merged,
         "out": kcon_out,
         "sheet_key": "12i4X3467bxW7Nc59ar3LsJ3tvdXD7nzFwxsLteB1bzY",
@@ -200,14 +202,15 @@ daily_exports = {
 
 for k, v in daily_exports.items():
     # Exported merged csvs to the computer
-    df: pl.DataFrame = v["df"]
-    out = processed_dir / v["out"]
-    logger.info(f"{k} exported to {out}")
-    df.write_csv(out, include_bom=True)
-    # Upload df to the sheet
-    gs.upload_dataframe(
-        df=v["df"],
-        sheet_key=v["sheet_key"],
-        sheet_name=v["sheet_name"],
-        range=v["a1_range"],
-    )
+    if v["upload"] is True:
+        df: pl.DataFrame = v["df"]
+        out = processed_dir / v["out"]
+        logger.info(f"{k} exported to {out}")
+        df.write_csv(out, include_bom=True)
+        # Upload df to the sheet
+        gs.upload_dataframe(
+            df=v["df"],
+            sheet_key=v["sheet_key"],
+            sheet_name=v["sheet_name"],
+            range=v["a1_range"],
+        )
