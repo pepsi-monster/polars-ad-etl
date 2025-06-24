@@ -415,7 +415,7 @@ aggregated_joined_total = aggregated_for_join_df["노출"].sum()
 
 # Control flags for uploading different datasets to Google Sheets
 upload_flags = {
-    "final_combined_df": False,  # Raw combined advertising data
+    "final_combined_df": True,  # Raw combined advertising data
     "final_aggregated_df": True,  # Aggregated advertising data with metrics
     "final_joined_df": True,  # Joined advertising + internal data
 }
