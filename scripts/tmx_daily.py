@@ -405,9 +405,9 @@ final_joined_df = aggregated_for_join_df.join(
 
 
 # Validate that totals match
-combined_total = final_combined_df["Impressions"].sum()
-aggregated_total = final_aggregated_df["노출"].sum()
-aggregated_joined_total = aggregated_for_join_df["노출"].sum()
+combined_imp_sum = final_combined_df["Impressions"].sum()
+aggregated_imp_sum = final_aggregated_df["노출"].sum()
+aggregated_joined_imp_sum = final_aggregated_df["노출"].sum()
 
 # =============================================================================
 # DATA UPLOAD CONFIGURATION
@@ -419,6 +419,13 @@ upload_flags = {
     "final_aggregated_df": True,  # Aggregated advertising data with metrics
     "final_joined_df": True,  # Joined advertising + internal data
 }
+
+assert combined_imp_sum == aggregated_imp_sum == aggregated_joined_imp_sum, (
+    "Impression totals don't match!\n"
+    f"`combined_total` impressions: {combined_imp_sum}\n"
+    f"`aggregated_total` impressions: {aggregated_imp_sum}\n"
+    f"`aggregated_joined_total` impressions: {aggregated_joined_imp_sum}"
+)
 
 # =============================================================================
 # GOOGLE SHEETS UPLOAD (CONDITIONAL)
