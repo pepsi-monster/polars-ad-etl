@@ -323,6 +323,8 @@ final_combined_df = (
             "Campaign name",
             "Ad Set Name",
             "Ad name",
+            "Age",
+            "Gender",
             "Link (ad settings)",
             "Amount spent (USD)",
             "Impressions",
