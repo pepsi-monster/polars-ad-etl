@@ -115,10 +115,14 @@ x_df = (
 # =============================================================================
 
 # Find common columns between Meta and X data for consistent combination
-common_columns = set(x_df.columns) & set(meta_df.columns)
+common_columns = list(set(x_df.columns) & set(meta_df.columns)) + ["Age", "Gender"]
 
 # Combine Meta and X data, keeping only common columns
-combined_df = pl.concat([meta_df, x_df], how="diagonal_relaxed").select(common_columns)
+combined_df_full_duration = pl.concat([meta_df, x_df], how="diagonal_relaxed")
+
+combined_df = combined_df_full_duration.select(common_columns).filter(
+    pl.col("Day") >= pl.lit("2025-01-01").str.to_date()
+)
 
 # Create filter for numeric columns that are finite and non-zero
 # This removes invalid data points and zero-spend campaigns
