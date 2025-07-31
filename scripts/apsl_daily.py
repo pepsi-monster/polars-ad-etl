@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
 podl_raw_dir = apsl_dir / "raw" / "podl"
-kcon_raw_dir = apsl_dir / "raw" / "kcon"
 processed_dir = apsl_dir / "proc"
 
 podl_meta_mapping = {
@@ -88,64 +87,7 @@ podl_standard_schema = {
     "Purchases conversion value": pl.Float64,
 }
 
-kcon_meta_mapping = {
-    "Day": "Day",
-    "Campaign name": "Campaign name",
-    "Ad Set Name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Gender": "Gender",
-    "Age": "Age",
-    "Amount spent (KRW)": "Amount spent (Raw)",
-    "Currency": "Currency",
-    "Impressions": "Impressions",
-    "Clicks (all)": "Clicks (all)",
-    "Link clicks": "Link clicks",
-}
-
-kcon_tiktok_mapping = {
-    "By Day": "Day",
-    "Campaign name": "Campaign name",
-    "Ad group name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Gender": "Gender",
-    "Age": "Age",
-    "Cost": "Amount spent (Raw)",
-    "Currency": "Currency",
-    "Impressions": "Impressions",
-    "Clicks (all)": "Clicks (all)",
-    "Clicks (destination)": "Link clicks",
-}
-
-kcon_x_mapping = {
-    "Time period": "Day",
-    "Campaign name": "Campaign name",
-    "Ad Group name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Spend": "Amount spent (Raw)",
-    "Currency": "Currency",
-    "Impressions": "Impressions",
-    "Clicks": "Clicks (all)",
-    "Link clicks": "Link clicks",
-}
-
-# Standardized schema for all data sources
-kcon_standard_schema = {
-    "Source": pl.String,
-    "Day": pl.Date,
-    "Campaign name": pl.String,
-    "Ad Set Name": pl.String,
-    "Ad name": pl.String,
-    "Age": pl.String,
-    "Gender": pl.String,
-    "Amount spent (Raw)": pl.Float64,
-    "Currency": pl.String,
-    "Impressions": pl.Int64,
-    "Clicks (all)": pl.Int64,
-    "Link clicks": pl.Int64,
-}
-
 podl = MultiSourceAdETL(podl_raw_dir)
-kcon = MultiSourceAdETL(kcon_raw_dir)
 
 podl_merged = (
     podl.read_tabular_files()
@@ -161,21 +103,6 @@ podl_merged = (
 
 podl_out = podl.construct_file_name("podl", podl_merged)
 
-kcon_merged = (
-    kcon.read_tabular_files()
-    .assign_source()
-    .clean_tiktok_remove_total()
-    .standardize(
-        standard_schema=kcon_standard_schema,
-        meta_mapping=kcon_meta_mapping,
-        tiktok_mapping=kcon_tiktok_mapping,
-        x_mapping=kcon_x_mapping,
-    )
-    .merge_and_collect()
-)
-
-kcon_out = kcon.construct_file_name("kcon", kcon_merged)
-
 # Initializing and setting up Google Cloud service's gspread
 gcloud_credential = Path("/Users/johnny/repos/polars-analytics/gcloud_credential.json")
 
@@ -189,14 +116,6 @@ daily_exports = {
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
         "sheet_name": "raw",
         "a1_range": ut.dataframe_to_a1_address(podl_merged),
-    },
-    "kcon": {
-        "upload": False,
-        "df": kcon_merged,
-        "out": kcon_out,
-        "sheet_key": "12i4X3467bxW7Nc59ar3LsJ3tvdXD7nzFwxsLteB1bzY",
-        "sheet_name": "raw",
-        "a1_range": ut.dataframe_to_a1_address(kcon_merged),
     },
 }
 
