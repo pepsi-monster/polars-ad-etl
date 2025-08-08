@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
 podl_raw_dir = apsl_dir / "raw" / "podl"
+apsl_raw_dir = apsl_dir / "raw" / "apsl"
 processed_dir = apsl_dir / "proc"
 
 podl_meta_mapping = {
@@ -104,7 +105,7 @@ podl_merged = (
 podl_out = podl.construct_file_name("podl", podl_merged)
 
 # Initializing and setting up Google Cloud service's gspread
-gcloud_credential = Path("/Users/johnny/repos/polars-analytics/gcloud_credential.json")
+gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
 
 gs = gcc(gcloud_credential).googlesheet
 

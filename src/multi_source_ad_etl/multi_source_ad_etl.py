@@ -17,12 +17,16 @@ class MultiSourceAdETL:
                 self.dfs.append(pl.read_excel(f, infer_schema_length=None))
         return self
 
-    def _detect_source(self, df: pl.DataFrame) -> str:
-        source_criteria = {
-            "Meta": {"Campaign name", "Day"},
-            "TikTok": {"By Day", "Cost"},
-            "X (Twitter)": {"Time period", "Clicks"},
-        }
+    def _detect_source(
+        self, df: pl.DataFrame, source_criteria: dict[str, set[str]] | None = None
+    ) -> str:
+        # Default criteria if none provided
+        if source_criteria is None:
+            source_criteria = {
+                "Meta": {"Campaign name", "Day"},
+                "TikTok": {"By Day", "Cost"},
+                "X (Twitter)": {"Time period", "Spend"},
+            }
 
         df_cols = set(df.columns)
 
@@ -33,11 +37,11 @@ class MultiSourceAdETL:
         logging.warning(f"Source: 'Unknown' assigned (columns: {df.columns})")
         return "Unknown"
 
-    def assign_source(self):
+    def assign_source(self, source_criteria: dict[str, set[str]] | None = None):
         updated_dfs = []
 
         for df in self.dfs:
-            src = self._detect_source(df)
+            src = self._detect_source(df, source_criteria)
 
             df = df.with_columns(pl.lit(src).alias("Source")).select(
                 ["Source"] + [col for col in df.columns if col != "Source"]
