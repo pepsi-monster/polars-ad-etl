@@ -56,14 +56,13 @@ class MultiSourceAdETL:
         updated_dfs = []
         for df in self.dfs:
             src = df["Source"][0]
-            if src == "X (Twitter)":
-                avg_frequency_dtype = df.schema["Average frequency"]
-                if avg_frequency_dtype == pl.String:
-                    df = df.with_columns(
-                        pl.col("Average frequency")
-                        .replace_strict("-", "0")
-                        .alias("Average frequency")
-                    )
+            if src == "X (Twitter)" and df.schema["Average frequency"] == pl.String:
+                df = df.with_columns(
+                    pl.when(pl.col("Average frequency") == "-")
+                    .then(pl.lit(0))
+                    .otherwise(pl.col("Average frequency"))
+                    .alias("Average frequency")
+                )
             updated_dfs.append(df)
         self.dfs = updated_dfs
         return self
