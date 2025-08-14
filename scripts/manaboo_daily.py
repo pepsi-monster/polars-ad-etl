@@ -77,9 +77,15 @@ mnb_standard_schema = {
 
 mnb = MultiSourceAdETL(mnb_raw_dir)
 
+source_criteria = {
+    "Meta": {"Campaign name", "Day"},
+    "TikTok": {"By Day", "Cost"},
+    "X (Twitter)": {"Time period", "Spend"},
+}
+
 mnb_merged = (
     mnb.read_tabular_files()
-    .assign_source()
+    .assign_source(source_criteria)
     .clean_x_avg_frequency()
     .standardize(
         standard_schema=mnb_standard_schema,

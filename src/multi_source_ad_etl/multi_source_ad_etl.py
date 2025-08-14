@@ -27,6 +27,20 @@ class MultiSourceAdETL:
                 "TikTok": {"By Day", "Cost"},
                 "X (Twitter)": {"Time period", "Spend"},
             }
+        else:
+            col_to_keys = {}
+
+            for src, cols in source_criteria.items():
+                for col in cols:
+                    if col not in col_to_keys:
+                        col_to_keys[col] = []
+                    col_to_keys[col].append(src)
+
+            for col, srcs in col_to_keys.items():  # srcs is already the list
+                if len(srcs) > 1:
+                    raise ValueError(
+                        f"Column '{col}' is used in multiple sources: {', '.join(srcs)}"
+                    )
 
         df_cols = set(df.columns)
 
@@ -38,6 +52,45 @@ class MultiSourceAdETL:
         return "Unknown"
 
     def assign_source(self, source_criteria: dict[str, set[str]] | None = None):
+        """
+        Detect and assign the advertising platform source for each DataFrame in `self.dfs`.
+
+        This method uses `_detect_source` to identify which platform (e.g., Meta, TikTok, X/Twitter)
+        a given DataFrame belongs to based on the presence of certain identifying columns.
+
+        Args:
+            source_criteria (dict[str, set[str]], optional):
+                A mapping of platform names to the set of column names required to identify them.
+                - Keys are source names (strings).
+                - Values are sets of column names (exact matches, case-sensitive) that must
+                all be present in the DataFrame for that source to be assigned.
+                If None, the method uses the default criteria defined in `_detect_source`.
+
+        Returns:
+            Self, with each DataFrame in `self.dfs` updated to include a new
+            `"Source"` column as the first column.
+
+        Usage:
+            # Using defaults:
+            etl.assign_source()
+
+            # Custom criteria:
+            criteria = {
+                "Meta": {"Campaign name", "Day"},
+                "TikTok": {"By Day", "Cost"},
+                "X (Twitter)": {"Time period", "Spend"},
+                "Google": {"Stuff", "Thing"},
+            }
+            etl.assign_source(criteria)
+
+        Notes:
+            - Column matching is strict: names in `source_criteria` must match the DataFrame's
+            column names exactly.
+            - The first matching source in `source_criteria` order is assigned; if multiple
+            platforms could match, the earlier one in the dict wins.
+            - If no match is found, `_detect_source` returns `"Unknown"`.
+            - Existing `"Source"` columns will be replaced.
+        """
         updated_dfs = []
 
         for df in self.dfs:
