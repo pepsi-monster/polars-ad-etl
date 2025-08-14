@@ -16,41 +16,42 @@ apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
 mnb_raw_dir = apsl_dir / "raw" / "mnb"
 processed_dir = apsl_dir / "proc"
 
-mnb_meta_mapping = {
-    "Day": "Day",
-    "Campaign name": "Campaign name",
-    "Ad Set Name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Gender": "Gender",
-    "Age": "Age",
-    "Link (ad settings)": "Link (ad settings)",
-    "Amount spent (USD)": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Frequency": "Frequency",
-    "Reach": "Reach",
-    "Clicks (all)": "Clicks (all)",
-    "ThruPlays": "ThruPlays",
-    "3-second video plays": "3-second video plays",
-    "Registrations Completed": "Registrations Completed",
-    "Purchases": "Purchases",
-    "Purchases conversion value": "Purchases conversion value",
-    "Video plays": "Video plays",
-}
-
-mnb_x_mapping = {
-    "Time period": "Day",
-    "Campaign name": "Campaign name",
-    "Spend": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Average frequency": "Frequency",
-    "Total audience reach": "Reach",
-    "Clicks": "Clicks (all)",
-    "Video completions": "ThruPlays",
-    "3s/100% video views": "3-second video plays",
-    "Leads": "Registrations Completed",
-    "Purchases": "Purchases",
-    "Purchases - sale amount": "Purchases conversion value",
-    "Video views": "Video plays",
+mnb_mapping = {
+    "Meta": {
+        "Day": "Day",
+        "Campaign name": "Campaign name",
+        "Ad Set Name": "Ad Set Name",
+        "Ad name": "Ad name",
+        "Gender": "Gender",
+        "Age": "Age",
+        "Link (ad settings)": "Link (ad settings)",
+        "Amount spent (USD)": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Frequency": "Frequency",
+        "Reach": "Reach",
+        "Clicks (all)": "Clicks (all)",
+        "ThruPlays": "ThruPlays",
+        "3-second video plays": "3-second video plays",
+        "Registrations Completed": "Registrations Completed",
+        "Purchases": "Purchases",
+        "Purchases conversion value": "Purchases conversion value",
+        "Video plays": "Video plays",
+    },
+    "X (Twitter)": {
+        "Time period": "Day",
+        "Campaign name": "Campaign name",
+        "Spend": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Average frequency": "Frequency",
+        "Total audience reach": "Reach",
+        "Clicks": "Clicks (all)",
+        "Video completions": "ThruPlays",
+        "3s/100% video views": "3-second video plays",
+        "Leads": "Registrations Completed",
+        "Purchases": "Purchases",
+        "Purchases - sale amount": "Purchases conversion value",
+        "Video views": "Video plays",
+    },
 }
 
 mnb_standard_schema = {
@@ -75,29 +76,25 @@ mnb_standard_schema = {
     "Video plays": pl.Int64,
 }
 
-mnb = MultiSourceAdETL(mnb_raw_dir)
-
-source_criteria = {
+mnb_source_criteria = {
     "Meta": {"Campaign name", "Day"},
-    "TikTok": {"By Day", "Cost"},
     "X (Twitter)": {"Time period", "Spend"},
 }
 
+mnb = MultiSourceAdETL(
+    raw_dir=mnb_raw_dir,
+    source_criteria=mnb_source_criteria,
+    rename_mappings=mnb_mapping,
+    standard_schema=mnb_standard_schema,
+)
+
+
 mnb_merged = (
     mnb.read_tabular_files()
-    .assign_source(source_criteria)
+    .assign_source()
     .clean_x_avg_frequency()
-    .standardize(
-        standard_schema=mnb_standard_schema,
-        meta_mapping=mnb_meta_mapping,
-        x_mapping=mnb_x_mapping,
-    )
+    .standardize()
     .merge_and_collect()
 )
 
-mnb_out_file_name = mnb.construct_file_name("manaboo", mnb_merged)
-
-mnb_out = processed_dir / mnb_out_file_name
-
-mnb_merged.write_csv(mnb_out, include_bom=True)
-logging.info(f"File exported to {mnb_out}")
+mnb_out = mnb.construct_file_name("manaboo", mnb_merged)

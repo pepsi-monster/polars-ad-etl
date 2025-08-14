@@ -4,9 +4,65 @@ import logging
 
 
 class MultiSourceAdETL:
-    def __init__(self, raw_dir: Path):
+    def __init__(
+        self,
+        raw_dir: Path,
+        source_criteria: dict[str, set[str]],
+        rename_mappings: dict[str, dict[str, str]],
+        standard_schema: dict[str, pl.DataType],
+    ):
         self.raw_dir = raw_dir
         self.dfs: list[pl.DataFrame] = []
+        self.source_criteria = source_criteria
+        self.rename_mappings = rename_mappings
+        self.standard_schema = standard_schema
+        self._validate_source_criteria()
+        self._validate_alignment()
+        self._validate_schema_coverage()
+
+    def _validate_alignment(self):
+        crit_keys = set(self.source_criteria.keys())
+        map_keys = set(self.rename_mappings.keys())
+
+        missing = sorted(crit_keys - map_keys)
+        extra = sorted(map_keys - crit_keys)
+        if missing or extra:
+            msgs = []
+            if missing:
+                msgs.append(f"Missing rename_mappings for sources: {missing}")
+            if extra:
+                msgs.append(f"Mappings provided for non-detectable sources: {extra}")
+            raise ValueError(" | ".join(msgs))
+
+    def _validate_source_criteria(self):
+        criteria = self.source_criteria
+        col_to_keys = {}
+
+        for src, cols in criteria.items():
+            for col in cols:
+                if col not in col_to_keys:
+                    col_to_keys[col] = []
+                col_to_keys[col].append(src)
+
+        for col, srcs in col_to_keys.items():  # srcs is already the list
+            if len(srcs) > 1:
+                raise ValueError(
+                    f"Column '{col}' is used in multiple sources: {', '.join(srcs)}"
+                )
+
+    def _validate_schema_coverage(self):
+        """Ensure all mapping targets are defined in the standard schema."""
+        schema_cols = set(self.standard_schema.keys())
+        bad = []
+        for src, mp in self.rename_mappings.items():
+            targets = set(mp.values())
+            missing_in_schema = sorted(targets - schema_cols)
+            if missing_in_schema:
+                bad.append(f"{src}: {missing_in_schema}")
+        if bad:
+            raise ValueError(
+                "Mapping targets not present in standard_schema -> " + " | ".join(bad)
+            )
 
     def read_tabular_files(self):
         for f in self.raw_dir.iterdir():
@@ -17,84 +73,23 @@ class MultiSourceAdETL:
                 self.dfs.append(pl.read_excel(f, infer_schema_length=None))
         return self
 
-    def _detect_source(
-        self, df: pl.DataFrame, source_criteria: dict[str, set[str]] | None = None
-    ) -> str:
+    def _detect_source(self, df: pl.DataFrame) -> str:
         # Default criteria if none provided
-        if source_criteria is None:
-            source_criteria = {
-                "Meta": {"Campaign name", "Day"},
-                "TikTok": {"By Day", "Cost"},
-                "X (Twitter)": {"Time period", "Spend"},
-            }
-        else:
-            col_to_keys = {}
-
-            for src, cols in source_criteria.items():
-                for col in cols:
-                    if col not in col_to_keys:
-                        col_to_keys[col] = []
-                    col_to_keys[col].append(src)
-
-            for col, srcs in col_to_keys.items():  # srcs is already the list
-                if len(srcs) > 1:
-                    raise ValueError(
-                        f"Column '{col}' is used in multiple sources: {', '.join(srcs)}"
-                    )
+        criteria = self.source_criteria
 
         df_cols = set(df.columns)
 
-        for src, required_cols in source_criteria.items():
-            if required_cols <= df_cols:
+        for src, required_cols in criteria.items():
+            if set(required_cols) <= df_cols:
                 return src
 
-        logging.warning(f"Source: 'Unknown' assigned (columns: {df.columns})")
-        return "Unknown"
+        raise ValueError(f"Source: 'Unknown' assigned (columns: {df.columns})")
 
-    def assign_source(self, source_criteria: dict[str, set[str]] | None = None):
-        """
-        Detect and assign the advertising platform source for each DataFrame in `self.dfs`.
-
-        This method uses `_detect_source` to identify which platform (e.g., Meta, TikTok, X/Twitter)
-        a given DataFrame belongs to based on the presence of certain identifying columns.
-
-        Args:
-            source_criteria (dict[str, set[str]], optional):
-                A mapping of platform names to the set of column names required to identify them.
-                - Keys are source names (strings).
-                - Values are sets of column names (exact matches, case-sensitive) that must
-                all be present in the DataFrame for that source to be assigned.
-                If None, the method uses the default criteria defined in `_detect_source`.
-
-        Returns:
-            Self, with each DataFrame in `self.dfs` updated to include a new
-            `"Source"` column as the first column.
-
-        Usage:
-            # Using defaults:
-            etl.assign_source()
-
-            # Custom criteria:
-            criteria = {
-                "Meta": {"Campaign name", "Day"},
-                "TikTok": {"By Day", "Cost"},
-                "X (Twitter)": {"Time period", "Spend"},
-                "Google": {"Stuff", "Thing"},
-            }
-            etl.assign_source(criteria)
-
-        Notes:
-            - Column matching is strict: names in `source_criteria` must match the DataFrame's
-            column names exactly.
-            - The first matching source in `source_criteria` order is assigned; if multiple
-            platforms could match, the earlier one in the dict wins.
-            - If no match is found, `_detect_source` returns `"Unknown"`.
-            - Existing `"Source"` columns will be replaced.
-        """
+    def assign_source(self):
         updated_dfs = []
 
         for df in self.dfs:
-            src = self._detect_source(df, source_criteria)
+            src = self._detect_source(df)
 
             df = df.with_columns(pl.lit(src).alias("Source")).select(
                 ["Source"] + [col for col in df.columns if col != "Source"]
@@ -145,17 +140,10 @@ class MultiSourceAdETL:
 
     def standardize(
         self,
-        standard_schema: dict,
-        meta_mapping: dict = None,
-        tiktok_mapping: dict = None,
-        x_mapping: dict = None,
     ):
         updated_dfs = []
-        mapping_lookup = {
-            "Meta": meta_mapping,
-            "TikTok": tiktok_mapping,
-            "X (Twitter)": x_mapping,
-        }
+        mapping_lookup = self.rename_mappings
+        standard_schema = self.standard_schema
 
         for df in self.dfs:
             src = df["Source"][0]
@@ -203,44 +191,44 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
-    kcon_meta_mapping = {
-        "Day": "Day",
-        "Campaign name": "Campaign name",
-        "Ad Set Name": "Ad Set Name",
-        "Ad name": "Ad name",
-        "Gender": "Gender",
-        "Age": "Age",
-        "Amount spent (KRW)": "Amount spent (Raw)",
-        "Currency": "Currency",
-        "Impressions": "Impressions",
-        "Clicks (all)": "Clicks (all)",
-        "Link clicks": "Link clicks",
-    }
-
-    kcon_tiktok_mapping = {
-        "By Day": "Day",
-        "Campaign name": "Campaign name",
-        "Ad group name": "Ad Set Name",
-        "Ad name": "Ad name",
-        "Gender": "Gender",
-        "Age": "Age",
-        "Cost": "Amount spent (Raw)",
-        "Currency": "Currency",
-        "Impressions": "Impressions",
-        "Clicks (all)": "Clicks (all)",
-        "Clicks (destination)": "Link clicks",
-    }
-
-    kcon_x_mapping = {
-        "Time period": "Day",
-        "Campaign name": "Campaign name",
-        "Ad Group name": "Ad Set Name",
-        "Ad name": "Ad name",
-        "Spend": "Amount spent (Raw)",
-        "Currency": "Currency",
-        "Impressions": "Impressions",
-        "Clicks": "Clicks (all)",
-        "Link clicks": "Link clicks",
+    kcon_mapping = {
+        "Meta": {
+            "Day": "Day",
+            "Campaign name": "Campaign name",
+            "Ad Set Name": "Ad Set Name",
+            "Ad name": "Ad name",
+            "Gender": "Gender",
+            "Age": "Age",
+            "Amount spent (KRW)": "Amount spent (Raw)",
+            "Currency": "Currency",
+            "Impressions": "Impressions",
+            "Clicks (all)": "Clicks (all)",
+            "Link clicks": "Link clicks",
+        },
+        "TikTok": {
+            "By Day": "Day",
+            "Campaign name": "Campaign name",
+            "Ad group name": "Ad Set Name",
+            "Ad name": "Ad name",
+            "Gender": "Gender",
+            "Age": "Age",
+            "Cost": "Amount spent (Raw)",
+            "Currency": "Currency",
+            "Impressions": "Impressions",
+            "Clicks (all)": "Clicks (all)",
+            "Clicks (destination)": "Link clicks",
+        },
+        "X (Twitter)": {
+            "Time period": "Day",
+            "Campaign name": "Campaign name",
+            "Ad Group name": "Ad Set Name",
+            "Ad name": "Ad name",
+            "Spend": "Amount spent (Raw)",
+            "Currency": "Currency",
+            "Impressions": "Impressions",
+            "Clicks": "Clicks (all)",
+            "Link clicks": "Link clicks",
+        },
     }
 
     # Standardized schema for all data sources
@@ -259,19 +247,25 @@ if __name__ == "__main__":
         "Link clicks": pl.Int64,
     }
 
+    kcon_source_criteria = {
+        "Meta": {"Campaign name", "Day"},
+        "TikTok": {"By Day", "Cost"},
+        "X (Twitter)": {"Time period", "Spend"},
+    }
+
     kcon_dir = Path("/Users/johnny/repos/polars-analytics/data/apsl/raw/kcon")
-    kcon = MultiSourceAdETL(kcon_dir)
+    kcon = MultiSourceAdETL(
+        raw_dir=kcon_dir,
+        source_criteria=kcon_source_criteria,
+        rename_mappings=kcon_mapping,
+        standard_schema=kcon_standard_schema,
+    )
 
     kcon_merged = (
         kcon.read_tabular_files()
         .assign_source()
         .clean_tiktok_remove_total()
-        .standardize(
-            standard_schema=kcon_standard_schema,
-            meta_mapping=kcon_meta_mapping,
-            tiktok_mapping=kcon_tiktok_mapping,
-            x_mapping=kcon_x_mapping,
-        )
+        .standardize()
         .merge_and_collect()
     )
     print(kcon_merged)
