@@ -104,7 +104,7 @@ The core of this repository is a reusable ETL class that automatically detects t
     - **Python 3.13**: Download and run the installer from the [official Python website](https://www.python.org/downloads/release/python-3130/). **Important**: Check the box "Add python.exe to PATH" during installation.
     - **`uv`**: Open PowerShell and run:
       ```powershell
-      irm https://astral.sh/uv/install.ps1 | iex
+      powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
       ```
 
 2.  **Clone and Set Up Environment**:
