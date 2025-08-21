@@ -77,7 +77,7 @@ The core of this repository is a reusable ETL class that automatically detects t
 2.  **Clone and Set Up Environment**:
 
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/pepsi-monster/polars-ad-etl.git
     cd polars-analytics
 
     # Create the virtual environment (uv will use the .python-version file)
