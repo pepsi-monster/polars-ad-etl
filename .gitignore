@@ -15,8 +15,10 @@ __pycache__/
 
 # Confidential ad raw data
 scripts/legacy
-data/raw
-data/proc 
+data/raw/*
+data/proc/*
+!data/raw/.gitkeep
+!data/proc/.gitkeep
 test/
 
 # Jupyter
