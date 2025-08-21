@@ -5,6 +5,7 @@ This project provides a robust ETL (Extract, Transform, Load) pipeline for inges
 The core of this repository is a reusable ETL class that automatically detects the data source, applies source-specific cleaning and transformations, and merges disparate datasets into a single, standardized schema.
 
 ## Table of Contents
+
 - [Core Features](#core-features)
 - [Project Structure](#project-structure)
 - [Setup and Installation](#setup-and-installation)
@@ -32,7 +33,6 @@ The core of this repository is a reusable ETL class that automatically detects t
 ## Project Structure
 
 ```
-/
 ├── .python-version      # Defines the required Python version (3.13)
 ├── pyproject.toml       # Project metadata and dependencies for `uv`
 ├── uv.lock              # Pinned versions of dependencies
@@ -69,6 +69,7 @@ The core of this repository is a reusable ETL class that automatically detects t
 ### Installation Steps
 
 1.  **Clone the repository:**
+
     ```bash
     git clone <repository-url>
     cd polars-analytics
@@ -76,6 +77,7 @@ The core of this repository is a reusable ETL class that automatically detects t
 
 2.  **Set up the Python environment:**
     If you use `pyenv`, the correct version will be picked up automatically. Create and activate the virtual environment using `uv`:
+
     ```bash
     # Create the virtual environment
     uv venv
@@ -125,24 +127,28 @@ python scripts/apsl_internal.py
 ```
 
 The script will log its progress to the console and, upon completion, will have:
+
 - Created a new CSV file in `data/proc/`.
 - Cleared the target range in the specified Google Sheet and uploaded the new data.
 
 ## Core Components
 
 ### `MultiSourceAdETL` Class
+
 - **Location**: `src/multi_source_ad_etl/multi_source_ad_etl.py`
 - **Purpose**: This is the engine of the project. It's a reusable class that encapsulates the entire ETL workflow. It is initialized with dictionaries that define the behavior for a specific pipeline (which sources to look for, how to rename their columns, etc.).
 
 ### ETL Scripts
+
 - **Location**: `scripts/`
 - **Purpose**: These are the executable entrypoints for different data pipelines. Each script is responsible for:
-    1.  Defining the file paths for its raw and processed data.
-    2.  Defining the mappings, schemas, and cleaning functions for its sources.
-    3.  Instantiating and running the `MultiSourceAdETL` class.
-    4.  Handling the final export to CSV and Google Sheets.
+  1.  Defining the file paths for its raw and processed data.
+  2.  Defining the mappings, schemas, and cleaning functions for its sources.
+  3.  Instantiating and running the `MultiSourceAdETL` class.
+  4.  Handling the final export to CSV and Google Sheets.
 
 ### Google Cloud Client
+
 - **Location**: `src/google_cloud_client/google_cloud_client.py`
 - **Purpose**: Provides a simple, high-level interface for interacting with the Google Sheets API. The `GoogleSheetService` class handles authentication, clearing ranges, and uploading Polars DataFrames.
 
@@ -159,4 +165,5 @@ To add a new data source to an existing pipeline (e.g., adding "Google Ads" to t
 ## Development
 
 ### Testing
+
 Currently, there is no test suite for this project. Adding tests, especially for the `MultiSourceAdETL` class and the cleaning functions, would be a valuable improvement. The `test/` directory is reserved for this purpose.
