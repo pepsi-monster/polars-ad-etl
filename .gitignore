@@ -14,7 +14,6 @@ __pycache__/
 .idea/
 
 # Confidential ad raw data
-scripts/legacy/
 data/raw/*
 data/proc/*
 !data/raw/.gitkeep
