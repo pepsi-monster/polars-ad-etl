@@ -20,7 +20,7 @@ The core of this repository is a reusable ETL class that automatically detects t
   - [Google Cloud Client](#google-cloud-client)
 - [Customization](#customization)
 - [Development](#development)
-  1 - [Testing](#testing)
+  - [Testing](#testing)
 
 ## Core Features
 
