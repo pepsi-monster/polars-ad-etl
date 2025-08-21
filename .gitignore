@@ -14,12 +14,13 @@ __pycache__/
 .idea/
 
 # Confidential ad raw data
-scripts/legacy
+scripts/legacy/
 data/raw/*
 data/proc/*
 !data/raw/.gitkeep
 !data/proc/.gitkeep
 test/
+
 
 # Jupyter
 .ipynb_checkpoints/
