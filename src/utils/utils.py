@@ -4,7 +4,7 @@ import polars as pl
 
 def make_date_filename(prefix: str, df: pl.DataFrame) -> str:
     """
-    Create a CSV filename with a date range from the first Date column in a DataFrame.
+    Create a filename with a date range from the first Date column in a DataFrame.
 
     Format: "{prefix}_{min_date}–{max_date}.csv"
 

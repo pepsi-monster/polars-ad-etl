@@ -95,7 +95,7 @@ apsl_merged = (
     .merge_and_collect()
 )
 
-apsl_out = apsl.construct_file_name("apsl", apsl_merged)
+apsl_out = ut.make_date_filename("apsl", apsl_merged)
 
 gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
 gs = gcc(gcloud_credential).googlesheet
