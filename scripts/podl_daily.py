@@ -113,22 +113,20 @@ podl_merged = (
 
 podl_out = processed_dir / ut.make_date_filename("podl", podl_merged)
 
-# Initializing and setting up Google Cloud service's gspread
-gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
-
-gs = gcc(gcloud_credential).googlesheet
-
-
 daily_exports = {
     "podl": {
-        "upload": False,
-        "export": True,
+        "upload": True,  # True means that upload to the sheet
+        "export": True,  # True means that export to the proc dir
         "df": podl_merged,
-        "out": podl_out,
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
-        "sheet_name": "raw",
+        "sheet_name": "raw",  # 👋 Don't forget to change this part!!!!!
+        "out": podl_out,
     },
 }
+
+# Initializing and setting up Google Cloud service's gspread
+gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
+gs = gcc(gcloud_credential).googlesheet
 
 for name, config in daily_exports.items():
     export_df: pl.DataFrame = config["df"]

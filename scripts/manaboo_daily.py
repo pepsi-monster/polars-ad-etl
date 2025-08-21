@@ -104,12 +104,12 @@ mnb_out = processed_dir / ut.make_date_filename("manaboo", mnb_merged)
 
 daily_exports = {
     "podl": {
-        "upload": False,  # Please change this part!
-        "export": True,
+        "upload": True,  # True means that upload to the sheet
+        "export": True,  # True means that export to the proc dir
         "df": mnb_merged,
-        "out": mnb_out,
         "sheet_key": "1cw5889l9iIKVBRIWdT7B1D6q1eB_cgK1YvK8DbHu5qo",
-        "sheet_name": "raw",
+        "sheet_name": "raw",  # 👋 Don't forget to change this part!!!!!
+        "out": mnb_out,
     },
 }
 

@@ -115,19 +115,19 @@ apsl_merged = (
 
 apsl_out = processed_dir / ut.make_date_filename("apsl", apsl_merged)
 
-gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
-gs = gcc(gcloud_credential).googlesheet
-
 daily_exports = {
     "apsl": {
-        "upload": False,
-        "export": True,
+        "upload": True,  # True means that upload to the sheet
+        "export": True,  # True means that export to the proc dir
         "df": apsl_merged,
         "sheet_key": "1zX87QulsAnrHR03zpVCLc2Ophcn-oVx1kimtPsfJgTE",
-        "sheet_name": "test",
+        "sheet_name": "raw",  # 👋 Don't forget to change this part!!!!!
         "out": apsl_out,
     },
 }
+
+gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
+gs = gcc(gcloud_credential).googlesheet
 
 for name, config in daily_exports.items():
     export_df: pl.DataFrame = config["df"]
