@@ -4,6 +4,7 @@ from google_cloud_client.google_cloud_client import GoogleCloudClient as gcc
 import utils.utils as ut
 import logging
 import polars as pl
+import multi_source_ad_etl.data_clean_lib as cln
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,7 +18,7 @@ podl_raw_dir = apsl_dir / "raw" / "podl"
 apsl_raw_dir = apsl_dir / "raw" / "apsl"
 processed_dir = apsl_dir / "proc"
 
-apsl_mapping = {
+podl_mapping = {
     "Meta": {
         "Day": "Day",
         "Campaign name": "Campaign name",
@@ -63,27 +64,6 @@ apsl_mapping = {
     },
 }
 
-podl_tiktok_mapping = {
-    "By Day": "Day",
-    "Campaign name": "Campaign name",
-    "Ad group name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Cost": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Frequency": "Frequency",
-    "Reach": "Reach",
-    "Clicks (destination)": "Link clicks",
-    "Video views": "Video plays",
-    "Video views at 25%": "Video plays at 25%",
-    "Video views at 50%": "Video plays at 50%",
-    "Video views at 75%": "Video plays at 75%",
-    "Video views at 100%": "Video plays at 100%",
-    "Adds to cart (website)": "Adds to cart",
-    "Checkouts initiated (website)": "Checkouts Initiated",
-    "Purchases (website)": "Purchases",
-    "Purchase value (website)": "Purchases conversion value",
-}
-
 podl_standard_schema = {
     "Source": pl.String,
     "Day": pl.Date,
@@ -110,49 +90,65 @@ podl_standard_schema = {
     "Purchases conversion value": pl.Float64,
 }
 
-podl = MultiSourceAdETL(podl_raw_dir)
+podl_source_criteria = {
+    "Meta": {"Day", "Gender"},
+    "TikTok": {"Cost", "Clicks (destination)"},
+}
 
-podl_merged = (
-    podl.read_tabular_files()
-    .assign_source()
-    .clean_tiktok_remove_total()
-    .standardize(
-        standard_schema=podl_standard_schema,
-        meta_mapping=podl_meta_mapping,
-        tiktok_mapping=podl_tiktok_mapping,
-    )
-    .merge_and_collect()
+cleaners = {
+    "TikTok": cln.remove_tiktok_total_row,
+}
+
+podl = MultiSourceAdETL(
+    raw_dir=podl_raw_dir,
+    source_criteria=podl_source_criteria,
+    rename_mappings=podl_mapping,
+    standard_schema=podl_standard_schema,
+    cleaning_functions=cleaners,
 )
 
-podl_out = podl.construct_file_name("podl", podl_merged)
+podl_merged = (
+    podl.read_tabular_files().assign_source().clean().standardize().merge_and_collect()
+)
+
+podl_out = processed_dir / ut.make_date_filename("podl", podl_merged)
 
 # Initializing and setting up Google Cloud service's gspread
 gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
 
 gs = gcc(gcloud_credential).googlesheet
 
+
 daily_exports = {
     "podl": {
-        "upload": True,
+        "upload": False,
+        "export": True,
         "df": podl_merged,
         "out": podl_out,
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
         "sheet_name": "raw",
-        "a1_range": ut.df_to_a1(podl_merged),
     },
 }
 
-for k, v in daily_exports.items():
-    # Exported merged csvs to the computer
-    if v["upload"] is True:
-        df: pl.DataFrame = v["df"]
-        out = processed_dir / v["out"]
-        logger.info(f"{k} exported to {out}")
-        df.write_csv(out, include_bom=True)
-        # Upload df to the sheet
-        gs.upload_dataframe(
-            df=v["df"],
-            sheet_key=v["sheet_key"],
-            sheet_name=v["sheet_name"],
-            range=v["a1_range"],
+for name, config in daily_exports.items():
+    export_df: pl.DataFrame = config["df"]
+    if config["upload"]:
+        # Clear range and notice how the `range_mode = "column_range"`
+        gs.clear_range(
+            sheet_key=config["sheet_key"],
+            sheet_name=config["sheet_name"],
+            range=ut.df_to_a1(export_df, range_mode="column_range"),
         )
+
+        # Upload df and notice how the `range_mode = "full_range"`
+        gs.upload_dataframe(
+            df=export_df,
+            sheet_key=config["sheet_key"],
+            sheet_name=config["sheet_name"],
+            range=ut.df_to_a1(export_df, range_mode="full_range"),
+        )
+
+    if config["export"]:
+        # Export csv
+        export_df.write_csv(config["out"], include_bom=True)
+        logging.info(f"File exported to {config['out']}")

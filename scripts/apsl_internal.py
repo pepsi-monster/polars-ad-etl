@@ -1,6 +1,7 @@
 from pathlib import Path
 from multi_source_ad_etl.multi_source_ad_etl import MultiSourceAdETL
 from google_cloud_client.google_cloud_client import GoogleCloudClient as gcc
+import multi_source_ad_etl.data_clean_lib as cln
 import utils.utils as ut
 import logging
 import polars as pl
@@ -85,24 +86,42 @@ apsl_standard_schema = {
     "Purchases conversion value": pl.Float64,
 }
 
-apsl = MultiSourceAdETL(apsl_raw_dir)
+apsl_src_criteria = {
+    "Meta": {"Day", "Purchases conversion value"},
+    "X (Twitter)": {"Time period", "Cart additions"},
+    "TikTok": {"Cost", "Clicks (destination)"},
+}
+
+cleaners = {
+    "TikTok": cln.remove_tiktok_total_row,
+    "X (Twitter)": cln.clean_x_avg_frequency,
+}
+
+apsl = MultiSourceAdETL(
+    raw_dir=apsl_raw_dir,
+    source_criteria=apsl_src_criteria,
+    rename_mappings=apsl_mapping,
+    standard_schema=apsl_standard_schema,
+    cleaning_functions=cleaners,
+)
 
 apsl_merged = (
     apsl.read_tabular_files()
     .assign_source()
-    .clean_tiktok_remove_total()
-    .standardize()
+    .clean_dataframes()
+    .standardize_dataframes()
     .merge_and_collect()
 )
 
-apsl_out = ut.make_date_filename("apsl", apsl_merged)
+apsl_out = processed_dir / ut.make_date_filename("apsl", apsl_merged)
 
 gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
 gs = gcc(gcloud_credential).googlesheet
 
 daily_exports = {
     "apsl": {
-        "upload": True,
+        "upload": False,
+        "export": True,
         "df": apsl_merged,
         "sheet_key": "1zX87QulsAnrHR03zpVCLc2Ophcn-oVx1kimtPsfJgTE",
         "sheet_name": "test",
@@ -110,19 +129,25 @@ daily_exports = {
     },
 }
 
-for k, v in daily_exports.items():
-    if v["upload"]:
-        temp_df = v["df"]
-
+for name, config in daily_exports.items():
+    export_df: pl.DataFrame = config["df"]
+    if config["upload"]:
         # Clear range and notice how the `range_mode = "column_range"`
         gs.clear_range(
-            sheet_key=v["sheet_key"],
-            sheet_name=v["sheet_name"],
-            range=ut.df_to_a1(temp_df, range_mode="column_range"),
+            sheet_key=config["sheet_key"],
+            sheet_name=config["sheet_name"],
+            range=ut.df_to_a1(export_df, range_mode="column_range"),
         )
+
+        # Upload df and notice how the `range_mode = "full_range"`
         gs.upload_dataframe(
-            df=temp_df,
-            sheet_key=v["sheet_key"],
-            sheet_name=v["sheet_name"],
-            range=ut.df_to_a1(temp_df, range_mode="full_range"),
+            df=export_df,
+            sheet_key=config["sheet_key"],
+            sheet_name=config["sheet_name"],
+            range=ut.df_to_a1(export_df, range_mode="full_range"),
         )
+
+    if config["export"]:
+        # Export csv
+        export_df.write_csv(config["out"], include_bom=True)
+        logging.info(f"File exported to {config['out']}")

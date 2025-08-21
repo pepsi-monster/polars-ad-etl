@@ -1,24 +1,41 @@
 import polars as pl
 from pathlib import Path
 import logging
+from typing import Callable
 
 
 class MultiSourceAdETL:
+    CleanerFn = Callable[[pl.DataFrame], pl.DataFrame]
+
     def __init__(
         self,
         raw_dir: Path,
         source_criteria: dict[str, set[str]],
         rename_mappings: dict[str, dict[str, str]],
         standard_schema: dict[str, pl.DataType],
+        cleaning_functions: dict[str, CleanerFn | list[CleanerFn]] | None = None,
     ):
         self.raw_dir = raw_dir
         self.dfs: list[pl.DataFrame] = []
         self.source_criteria = source_criteria
         self.rename_mappings = rename_mappings
         self.standard_schema = standard_schema
+        self.cleaning_functions = {}
+        if cleaning_functions:
+            for src, fns in cleaning_functions.items():
+                if callable(fns):  # single cleaner
+                    self.cleaning_functions[src] = [fns]
+                elif isinstance(fns, list):  # already a list
+                    self.cleaning_functions[src] = fns
+                else:
+                    raise TypeError(
+                        f"Expected CleanerFn or list[CleanerFn] for {src}, got {type(fns)}"
+                    )
+
         self._validate_source_criteria()
         self._validate_alignment()
         self._validate_schema_coverage()
+        self._validate_cleaning_functions()
 
     def _validate_alignment(self):
         crit_keys = set(self.source_criteria.keys())
@@ -64,6 +81,18 @@ class MultiSourceAdETL:
                 "Mapping targets not present in standard_schema -> " + " | ".join(bad)
             )
 
+    def _validate_cleaning_functions(self):
+        if self.cleaning_functions:
+            criteria_src_set = set(self.source_criteria.keys())
+            cleaning_func_src_set = set(self.cleaning_functions.keys())
+
+            if not cleaning_func_src_set <= criteria_src_set:
+                extra = cleaning_func_src_set - criteria_src_set
+                raise ValueError(
+                    f"Unknown source(s) in clean_dict: {extra}. "
+                    f"Allowed sources: {criteria_src_set}"
+                )
+
     def read_tabular_files(self):
         for f in self.raw_dir.iterdir():
             suffix = f.suffix.lower()
@@ -100,45 +129,24 @@ class MultiSourceAdETL:
         self.dfs = updated_dfs
         return self
 
-    def clean_x_avg_frequency(self):
-        updated_dfs = []
-        for df in self.dfs:
-            src = df["Source"][0]
-            if src == "X (Twitter)" and df.schema["Average frequency"] == pl.String:
-                df = df.with_columns(
-                    pl.when(pl.col("Average frequency") == "-")
-                    .then(pl.lit(0))
-                    .otherwise(pl.col("Average frequency"))
-                    .alias("Average frequency")
-                )
-            updated_dfs.append(df)
-        self.dfs = updated_dfs
-        return self
+    def clean_dataframes(self):
+        if self.cleaning_functions:
+            updated_dfs = []
+            for df in self.dfs:
+                src = df["Source"][0]
+                fns = self.cleaning_functions.get(src)
+                if fns:
+                    for fn in fns:
+                        df = fn(df)
+                updated_dfs.append(df)
 
-    def clean_tiktok_remove_total(self):
-        updated_dfs = []
-        for df in self.dfs:
-            src = df["Source"][0]
+            self.dfs = updated_dfs
+            return self
+        else:
+            logging.warning("Clean method called with no cleaning functions provided")
+            return self
 
-            if src == "TikTok":
-                total_col = df.columns[1]
-                df = df.remove(pl.col(total_col).str.starts_with("Total"))
-            updated_dfs.append(df)
-        self.dfs = updated_dfs
-        return self
-
-    def clean_tiktok_strip_mp4_suffix(self):
-        updated_dfs = []
-        for df in self.dfs:
-            src = df["Source"][0]
-
-            if src == "TikTok":
-                df = df.with_columns(pl.col("Ad name").str.strip_suffix(".mp4"))
-            updated_dfs.append(df)
-        self.dfs = updated_dfs
-        return self
-
-    def standardize(
+    def standardize_dataframes(
         self,
     ):
         updated_dfs = []

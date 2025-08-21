@@ -4,6 +4,7 @@ from google_cloud_client.google_cloud_client import GoogleCloudClient as gcc
 import utils.utils as ut
 import logging
 import polars as pl
+import multi_source_ad_etl.data_clean_lib as cln
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,19 +82,60 @@ mnb_source_criteria = {
     "X (Twitter)": {"Objective", "Time period"},
 }
 
+cleaners = {"X (Twitter)": cln.clean_x_avg_frequency}
+
 mnb = MultiSourceAdETL(
     raw_dir=mnb_raw_dir,
     source_criteria=mnb_source_criteria,
     rename_mappings=mnb_mapping,
     standard_schema=mnb_standard_schema,
+    cleaning_functions=cleaners,
 )
 
 mnb_merged = (
     mnb.read_tabular_files()
     .assign_source()
-    .clean_x_avg_frequency()
-    .standardize()
+    .clean_dataframes()
+    .standardize_dataframes()
     .merge_and_collect()
 )
 
-mnb_out = mnb.construct_file_name("manaboo", mnb_merged)
+mnb_out = processed_dir / ut.make_date_filename("manaboo", mnb_merged)
+
+daily_exports = {
+    "podl": {
+        "upload": False,  # Please change this part!
+        "export": True,
+        "df": mnb_merged,
+        "out": mnb_out,
+        "sheet_key": "1cw5889l9iIKVBRIWdT7B1D6q1eB_cgK1YvK8DbHu5qo",
+        "sheet_name": "raw",
+    },
+}
+
+# Initializing and setting up Google Cloud service's gspread
+gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
+gs = gcc(gcloud_credential).googlesheet
+
+for name, config in daily_exports.items():
+    export_df: pl.DataFrame = config["df"]
+    if config["upload"]:
+        # Clear range and notice how the `range_mode = "column_range"`
+        gs.clear_range(
+            sheet_key=config["sheet_key"],
+            sheet_name=config["sheet_name"],
+            range=ut.df_to_a1(export_df, range_mode="column_range"),
+        )
+
+        # Upload df and notice how the `range_mode = "full_range"`
+        gs.upload_dataframe(
+            df=export_df,
+            sheet_key=config["sheet_key"],
+            sheet_name=config["sheet_name"],
+            range=ut.df_to_a1(export_df, range_mode="full_range"),
+        )
+
+    if config["export"]:
+        # Export csv
+        export_df.write_csv(config["out"], include_bom=True)
+        logging.info(f"File exported to {config['out']}")
