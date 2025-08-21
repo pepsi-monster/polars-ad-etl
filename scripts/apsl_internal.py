@@ -1,10 +1,10 @@
 from pathlib import Path
 from multi_source_ad_etl.multi_source_ad_etl import MultiSourceAdETL
 from google_cloud_client.google_cloud_client import GoogleCloudClient as gcc
-import multi_source_ad_etl.data_clean_lib as cln
 import utils.utils as ut
 import logging
 import polars as pl
+import multi_source_ad_etl.data_clean_lib as cln
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,9 +13,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
-apsl_raw_dir = apsl_dir / "raw" / "apsl"
-processed_dir = apsl_dir / "proc"
+data_dir = Path(__file__).parent.parent / "data"
+apsl_raw_dir = data_dir / "raw" / "apsl"
+processed_dir = data_dir / "proc"
+
+# Create folders if they don't exist
+data_dir.mkdir(parents=True, exist_ok=True)
+apsl_raw_dir.mkdir(parents=True, exist_ok=True)
+processed_dir.mkdir(parents=True, exist_ok=True)
 
 apsl_mapping = {
     "Meta": {

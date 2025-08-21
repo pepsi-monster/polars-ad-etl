@@ -13,9 +13,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
-mnb_raw_dir = apsl_dir / "raw" / "mnb"
-processed_dir = apsl_dir / "proc"
+data_dir = Path(__file__).parent.parent / "data"
+mnb_raw_dir = data_dir / "raw" / "mnb"
+processed_dir = data_dir / "proc"
+
+# Create folders if they don't exist
+data_dir.mkdir(parents=True, exist_ok=True)
+mnb_raw_dir.mkdir(parents=True, exist_ok=True)
+processed_dir.mkdir(parents=True, exist_ok=True)
 
 mnb_mapping = {
     "Meta": {

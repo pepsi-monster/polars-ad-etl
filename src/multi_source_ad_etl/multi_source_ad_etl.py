@@ -100,6 +100,11 @@ class MultiSourceAdETL:
                 self.dfs.append(pl.read_csv(f, infer_schema_length=None))
             elif suffix == ".xlsx":
                 self.dfs.append(pl.read_excel(f, infer_schema_length=None))
+        if not self.dfs:
+            raise ValueError(
+                f"""No CSV or XLSX found in directory: {self.raw_dir}. 
+            File(s) present: {[f.name for f in self.raw_dir.iterdir()] or "None"}"""
+            )
         return self
 
     def _detect_source(self, df: pl.DataFrame) -> str:

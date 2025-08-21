@@ -14,7 +14,9 @@ __pycache__/
 .idea/
 
 # Confidential ad raw data
-data/apsl/
+scripts/legacy
+data/raw
+data/proc 
 test/
 
 # Jupyter

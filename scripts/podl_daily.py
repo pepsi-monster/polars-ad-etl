@@ -13,10 +13,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
-podl_raw_dir = apsl_dir / "raw" / "podl"
-apsl_raw_dir = apsl_dir / "raw" / "apsl"
-processed_dir = apsl_dir / "proc"
+data_dir = Path(__file__).parent.parent / "data"
+podl_raw_dir = data_dir / "raw" / "podl"
+processed_dir = data_dir / "proc"
+
+# Create folders if they don't exist
+data_dir.mkdir(parents=True, exist_ok=True)
+podl_raw_dir.mkdir(parents=True, exist_ok=True)
+processed_dir.mkdir(parents=True, exist_ok=True)
 
 podl_mapping = {
     "Meta": {
