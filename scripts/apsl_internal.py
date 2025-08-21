@@ -97,14 +97,32 @@ apsl_merged = (
 
 apsl_out = apsl.construct_file_name("apsl", apsl_merged)
 
+gcloud_credential = Path(__file__).parent.parent / "gcloud_credential.json"
+gs = gcc(gcloud_credential).googlesheet
+
 daily_exports = {
     "apsl": {
         "upload": True,
         "df": apsl_merged,
-        "out": apsl_out,
         "sheet_key": "1zX87QulsAnrHR03zpVCLc2Ophcn-oVx1kimtPsfJgTE",
-        "sheet_name": "raw",
+        "sheet_name": "test",
+        "out": apsl_out,
     },
 }
 
-apsl_merged.write_csv(f"{processed_dir}/{apsl_out}", include_bom=True)
+for k, v in daily_exports.items():
+    if v["upload"]:
+        temp_df = v["df"]
+
+        # Clear range and notice how the `range_mode = "column_range"`
+        gs.clear_range(
+            sheet_key=v["sheet_key"],
+            sheet_name=v["sheet_name"],
+            range=ut.df_to_a1(temp_df, range_mode="column_range"),
+        )
+        gs.upload_dataframe(
+            df=temp_df,
+            sheet_key=v["sheet_key"],
+            sheet_name=v["sheet_name"],
+            range=ut.df_to_a1(temp_df, range_mode="full_range"),
+        )

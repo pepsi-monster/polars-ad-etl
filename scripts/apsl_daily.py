@@ -138,7 +138,7 @@ daily_exports = {
         "out": podl_out,
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
         "sheet_name": "raw",
-        "a1_range": ut.dataframe_to_a1_address(podl_merged),
+        "a1_range": ut.df_to_a1(podl_merged),
     },
 }
 

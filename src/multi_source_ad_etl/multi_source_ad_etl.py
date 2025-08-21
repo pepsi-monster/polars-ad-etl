@@ -170,16 +170,6 @@ class MultiSourceAdETL:
         self.dfs = updated_dfs
         return self
 
-    def construct_file_name(self, identifier: str, df: pl.DataFrame):
-        date_cols = [col for col, dtype in df.schema.items() if dtype == pl.Date]
-        first_date_col = date_cols[0] if date_cols else None
-
-        min_date = df.select(pl.col(first_date_col)).min().item()
-        max_date = df.select(pl.col(first_date_col)).max().item()
-        file_name = f"{identifier}_{min_date}–{max_date}.csv"
-
-        return file_name
-
     def merge_and_collect(self):
         merged: pl.DataFrame = pl.concat(self.dfs)
         logging.info(f"{len(self.dfs)} file(s) have been merged")

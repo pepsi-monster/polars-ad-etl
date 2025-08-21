@@ -2,7 +2,30 @@ from typing import Literal, Optional
 import polars as pl
 
 
-def dataframe_to_a1_address(
+def make_date_filename(prefix: str, df: pl.DataFrame) -> str:
+    """
+    Create a CSV filename with a date range from the first Date column in a DataFrame.
+
+    Format: "{prefix}_{min_date}–{max_date}.csv"
+
+    Raises
+    ------
+    ValueError
+        If no Date column exists in the DataFrame.
+    """
+    date_cols = [col for col, dtype in df.schema.items() if dtype == pl.Date]
+
+    if not date_cols:
+        raise ValueError(f"Date col no found in {df}")
+
+    first_date_col = date_cols[0]
+    min_date = df.select(pl.col(first_date_col)).min().item()
+    max_date = df.select(pl.col(first_date_col)).max().item()
+
+    return f"{prefix}_{min_date}–{max_date}.csv"
+
+
+def df_to_a1(
     df: pl.DataFrame,
     range_mode: Literal["column_range", "full_range"] = "full_range",
     vertical_offset: int | None = None,
@@ -77,5 +100,5 @@ if __name__ == "__main__":
 
     df = pl.DataFrame(sample_data)
 
-    print(dataframe_to_a1_address(df, range_mode="full_range"))
-    print(dataframe_to_a1_address(df, range_mode="column_range"))
+    print(df_to_a1(df, range_mode="full_range"))
+    print(df_to_a1(df, range_mode="column_range"))
