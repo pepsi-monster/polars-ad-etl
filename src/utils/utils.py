@@ -1,8 +1,10 @@
+from typing import Literal, Optional
 import polars as pl
 
 
 def dataframe_to_a1_address(
     df: pl.DataFrame,
+    range_mode: Literal["column_range", "full_range"] = "full_range",
     vertical_offset: int | None = None,
     horizontal_offset: int | None = None,
 ):
@@ -26,6 +28,54 @@ def dataframe_to_a1_address(
     a1_end = _int_to_bijective_base_26(df_width + h_offset)
     int_end = df_length + v_offset
 
-    a1_address = f"{a1_start}{int_start}:{a1_end}{int_end}"
+    column_range = f"{a1_start}:{a1_end}"
+    full_range = f"{a1_start}{int_start}:{a1_end}{int_end}"
 
-    return a1_address
+    range = column_range if range_mode == "column_range" else full_range
+
+    return range
+
+
+if __name__ == "__main__":
+    sample_data = [
+        {
+            "Campaign": "Meta_Summer2025",
+            "Day": "2025-08-01",
+            "Impressions": 12000,
+            "Clicks": 350,
+            "Spend": 78.5,
+        },
+        {
+            "Campaign": "TikTok_BackToSchool",
+            "Day": "2025-08-01",
+            "Impressions": 18000,
+            "Clicks": 500,
+            "Spend": 92.0,
+        },
+        {
+            "Campaign": "Google_Search_Ads",
+            "Day": "2025-08-01",
+            "Impressions": 9000,
+            "Clicks": 260,
+            "Spend": 45.2,
+        },
+        {
+            "Campaign": "Pinterest_AutumnIdeas",
+            "Day": "2025-08-01",
+            "Impressions": 7500,
+            "Clicks": 150,
+            "Spend": 20.0,
+        },
+        {
+            "Campaign": "X_TwitterPromo",
+            "Day": "2025-08-01",
+            "Impressions": 5000,
+            "Clicks": 120,
+            "Spend": 10.5,
+        },
+    ]
+
+    df = pl.DataFrame(sample_data)
+
+    print(dataframe_to_a1_address(df, range_mode="full_range"))
+    print(dataframe_to_a1_address(df, range_mode="column_range"))

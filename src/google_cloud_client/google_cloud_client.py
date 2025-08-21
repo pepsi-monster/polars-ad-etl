@@ -98,8 +98,46 @@ class GoogleSheetService:
                 logging.error(f"Failed: {e}")
                 raise
 
+    def clear_range(self, sheet_key: str, sheet_name: str, range: str):
+        with yaspin(color="blue") as spinner:
+            try:
+                client = self.client
+
+                spreadsheet = client.open_by_key(sheet_key)
+                spreadsheet_name = spreadsheet.title
+
+                # Step 1: Open the spreadsheet
+                spinner.text = f"'{spreadsheet_name}' opened"
+                time.sleep(1)
+                if sheet_name not in [ws.title for ws in spreadsheet.worksheets()]:
+                    raise ValueError(
+                        f"Sheet '{sheet_name}' not found in spreadsheet '{spreadsheet_name}'"
+                    )
+
+                sheet = spreadsheet.worksheet(sheet_name)
+
+                # Step 2: Clear existing data
+                spinner.text = f"Clearing data in range {range}"
+                time.sleep(1)
+                sheet.batch_clear([range])
+                spinner.text = (
+                    f"Cleared data at '{spreadsheet_name}' > '{sheet_name}' > '{range}'"
+                )
+
+                spinner.ok("✅")
+
+            except Exception as e:
+                spinner.fail("💥")
+                spinner.text = f"Clearing failed: {str(e)}"
+                logging.error(f"Failed: {e}")
+                raise
+
     def upload_dataframe(
-        self, df: pl.DataFrame, sheet_key: str, sheet_name: str, range: str
+        self,
+        df: pl.DataFrame,
+        sheet_key: str,
+        sheet_name: str,
+        range: str,
     ):
         """
         Upload a Polars DataFrame to a specific Google Sheet range.
@@ -117,6 +155,7 @@ class GoogleSheetService:
                 spreadsheet = client.open_by_key(sheet_key)
                 spreadsheet_name = spreadsheet.title
 
+                # Step 1: Open the spreadsheet
                 spinner.text = f"'{spreadsheet_name}' opened"
                 time.sleep(1)
                 if sheet_name not in [ws.title for ws in spreadsheet.worksheets()]:
@@ -125,11 +164,6 @@ class GoogleSheetService:
                     )
 
                 sheet = spreadsheet.worksheet(sheet_name)
-
-                # Step 1: Clear existing data
-                spinner.text = f"Clearing data in range {range}"
-                time.sleep(1)
-                sheet.batch_clear([range])
 
                 def _polars_date_to_excel_serial(df: pl.DataFrame) -> pl.DataFrame:
                     date_cols = [

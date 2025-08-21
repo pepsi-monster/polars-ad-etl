@@ -16,54 +16,54 @@ apsl_dir = Path(__file__).parent.parent / "data" / "apsl"
 apsl_raw_dir = apsl_dir / "raw" / "apsl"
 processed_dir = apsl_dir / "proc"
 
-apsl_meta_mapping = {
-    "Day": "Day",
-    "Account name": "Account name",
-    "Campaign name": "Campaign name",
-    "Ad Set Name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Amount spent (USD)": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Reach": "Reach",
-    "Frequency": "Frequency",
-    "Link clicks": "Link clicks",
-    "Registrations Completed": "Registrations Completed",
-    "Adds to cart": "Adds to cart",
-    "Checkouts Initiated": "Checkouts Initiated",
-    "Purchases": "Purchases",
-    "Purchases conversion value": "Purchases conversion value",
-}
-
-apsl_x_mapping = {
-    "Time period": "Day",
-    "Funding source name": "Account name",
-    "Campaign name": "Campaign name",
-    "Ad Group name": "Ad Set Name",
-    "Spend": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Link clicks": "Link clicks",
-    "Leads": "Registrations Completed",
-    "Cart additions": "Adds to cart",
-    "Checkouts initiated": "Checkouts Initiated",
-    "Purchases": "Purchases",
-    "Purchases - sale amount": "Purchases conversion value",
-}
-
-apsl_tiktok_mapping = {
-    "By Day": "Day",
-    "Account name": "Account name",
-    "Campaign name": "Campaign name",
-    "Ad group name": "Ad Set Name",
-    "Ad name": "Ad name",
-    "Cost": "Amount spent (USD)",
-    "Impressions": "Impressions",
-    "Frequency": "Frequency",
-    "Reach": "Reach",
-    "Clicks (destination)": "Link clicks",
-    "Adds to cart (website)": "Adds to cart",
-    "Checkouts initiated (website)": "Checkouts Initiated",
-    "Purchases (website)": "Purchases",
-    "Purchase value (website)": "Purchases conversion value",
+apsl_mapping = {
+    "Meta": {
+        "Day": "Day",
+        "Account name": "Account name",
+        "Campaign name": "Campaign name",
+        "Ad Set Name": "Ad Set Name",
+        "Ad name": "Ad name",
+        "Amount spent (USD)": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Reach": "Reach",
+        "Frequency": "Frequency",
+        "Link clicks": "Link clicks",
+        "Registrations Completed": "Registrations Completed",
+        "Adds to cart": "Adds to cart",
+        "Checkouts Initiated": "Checkouts Initiated",
+        "Purchases": "Purchases",
+        "Purchases conversion value": "Purchases conversion value",
+    },
+    "X (Twitter)": {
+        "Time period": "Day",
+        "Funding source name": "Account name",
+        "Campaign name": "Campaign name",
+        "Ad Group name": "Ad Set Name",
+        "Spend": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Link clicks": "Link clicks",
+        "Leads": "Registrations Completed",
+        "Cart additions": "Adds to cart",
+        "Checkouts initiated": "Checkouts Initiated",
+        "Purchases": "Purchases",
+        "Purchases - sale amount": "Purchases conversion value",
+    },
+    "TikTok": {
+        "By Day": "Day",
+        "Account name": "Account name",
+        "Campaign name": "Campaign name",
+        "Ad group name": "Ad Set Name",
+        "Ad name": "Ad name",
+        "Cost": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Frequency": "Frequency",
+        "Reach": "Reach",
+        "Clicks (destination)": "Link clicks",
+        "Adds to cart (website)": "Adds to cart",
+        "Checkouts initiated (website)": "Checkouts Initiated",
+        "Purchases (website)": "Purchases",
+        "Purchase value (website)": "Purchases conversion value",
+    },
 }
 
 apsl_standard_schema = {
@@ -91,12 +91,7 @@ apsl_merged = (
     apsl.read_tabular_files()
     .assign_source()
     .clean_tiktok_remove_total()
-    .standardize(
-        standard_schema=apsl_standard_schema,
-        meta_mapping=apsl_meta_mapping,
-        tiktok_mapping=apsl_tiktok_mapping,
-        x_mapping=apsl_x_mapping,
-    )
+    .standardize()
     .merge_and_collect()
 )
 
@@ -109,7 +104,6 @@ daily_exports = {
         "out": apsl_out,
         "sheet_key": "1zX87QulsAnrHR03zpVCLc2Ophcn-oVx1kimtPsfJgTE",
         "sheet_name": "raw",
-        "a1_range": ut.dataframe_to_a1_address(apsl_merged),
     },
 }
 

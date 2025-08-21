@@ -78,7 +78,7 @@ mnb_standard_schema = {
 
 mnb_source_criteria = {
     "Meta": {"Campaign name", "Day"},
-    "X (Twitter)": {"Time period", "Spend"},
+    "X (Twitter)": {"Objective", "Time period"},
 }
 
 mnb = MultiSourceAdETL(
@@ -87,7 +87,6 @@ mnb = MultiSourceAdETL(
     rename_mappings=mnb_mapping,
     standard_schema=mnb_standard_schema,
 )
-
 
 mnb_merged = (
     mnb.read_tabular_files()
