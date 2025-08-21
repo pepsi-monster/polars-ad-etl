@@ -89,7 +89,7 @@ class MultiSourceAdETL:
             if not cleaning_func_src_set <= criteria_src_set:
                 extra = cleaning_func_src_set - criteria_src_set
                 raise ValueError(
-                    f"Unknown source(s) in clean_dict: {extra}. "
+                    f"Unknown source(s) in cleaning_functions_dictionary: {extra}. "
                     f"Allowed sources: {criteria_src_set}"
                 )
 

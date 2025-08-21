@@ -96,7 +96,7 @@ podl_source_criteria = {
 }
 
 cleaners = {
-    "TikTok": cln.remove_tiktok_total_row,
+    "TikTo": cln.remove_tiktok_total_row,
 }
 
 podl = MultiSourceAdETL(
@@ -115,8 +115,8 @@ podl_out = processed_dir / ut.make_date_filename("podl", podl_merged)
 
 daily_exports = {
     "podl": {
-        "upload": True,  # True means that upload to the sheet
-        "export": True,  # True means that export to the proc dir
+        "upload": False,  # True means that upload to the sheet
+        "export": False,  # True means that export to the proc dir
         "df": podl_merged,
         "sheet_key": "17-apAkDkg5diJVNeYYCYu7CcCFEn_iPSr3mGk3GWZS4",
         "sheet_name": "raw",  # 👋 Don't forget to change this part!!!!!
