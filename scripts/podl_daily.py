@@ -112,7 +112,11 @@ podl = MultiSourceAdETL(
 )
 
 podl_merged = (
-    podl.read_tabular_files().assign_source().clean().standardize().merge_and_collect()
+    podl.read_tabular_files()
+    .assign_source()
+    .clean_dataframes()
+    .standardize_dataframes()
+    .merge_and_collect()
 )
 
 podl_out = processed_dir / ut.make_date_filename("podl", podl_merged)
