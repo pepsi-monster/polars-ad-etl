@@ -63,41 +63,72 @@ The core of this repository is a reusable ETL class that automatically detects t
 
 ### Prerequisites
 
-- **Python 3.13**: The project is locked to this version. We recommend using `pyenv` to manage Python versions.
-- **`uv`**: This project uses `uv` for dependency management. It's a fast, modern replacement for `pip` and `venv`. [Installation instructions](https://github.com/astral-sh/uv).
+- **Python 3.13**: The project is locked to this version.
+- **`uv`**: This project uses `uv` for dependency management. It's a fast, modern replacement for `pip` and `venv`.
 - **Google Cloud Project**: A GCP project with the Google Sheets API and Google Drive API enabled.
 
-### Installation Steps
+### Installation for macOS & Linux
 
-1.  **Clone the repository:**
+1.  **Install Prerequisites**:
+
+    - **Python 3.13**: We recommend using `pyenv` to manage Python versions (`pyenv install 3.13.0`).
+    - **`uv`**: Follow the [official `uv` installation instructions](https://github.com/astral-sh/uv).
+
+2.  **Clone and Set Up Environment**:
 
     ```bash
     git clone <repository-url>
     cd polars-analytics
-    ```
 
-2.  **Set up the Python environment:**
-    If you use `pyenv`, the correct version will be picked up automatically. Create and activate the virtual environment using `uv`:
-
-    ```bash
-    # Create the virtual environment
+    # Create the virtual environment (uv will use the .python-version file)
     uv venv
 
     # Activate the environment
     source .venv/bin/activate
     ```
 
-3.  **Install dependencies:**
+3.  **Install Dependencies**:
 
     ```bash
+    # Install dependencies from the lock file
     uv sync
+
+    # Install the project in editable mode
+    uv pip install -e .
     ```
 
-4.  **Install the repo in editable mode::**
-    This allows you to import the package while developing and see changes immediately:
+### Installation for Windows
 
-    ```bash
-    uv pip install -e
+1.  **Install Prerequisites**:
+
+    - **Python 3.13**: Download and run the installer from the [official Python website](https://www.python.org/downloads/release/python-3130/). **Important**: Check the box "Add python.exe to PATH" during installation.
+    - **`uv`**: Open PowerShell and run:
+      ```powershell
+      irm https://astral.sh/uv/install.ps1 | iex
+      ```
+
+2.  **Clone and Set Up Environment**:
+    Open Command Prompt or PowerShell and run:
+
+    ```powershell
+    git clone <repository-url>
+    cd polars-analytics
+
+    # Create the virtual environment
+    uv venv
+
+    # Activate the environment
+    .venv\Scripts\activate
+    ```
+
+3.  **Install Dependencies**:
+
+    ```powershell
+    # Install dependencies from the lock file
+    uv sync
+
+    # Install the project in editable mode
+    uv pip install -e .
     ```
 
 ### Google Cloud Authentication
@@ -123,9 +154,9 @@ The ETL process follows these steps:
 
 ## Usage: Running the ETL Scripts
 
-To run a specific ETL process, execute its corresponding script from the root directory.
+To run a specific ETL process, first activate your virtual environment, then execute the desired script.
 
-**Example:**
+**On macOS & Linux:**
 
 ```bash
 # Ensure your virtual environment is active
@@ -133,6 +164,16 @@ source .venv/bin/activate
 
 # Run the "apsl" daily ETL process
 python scripts/apsl_internal.py
+```
+
+**On Windows:**
+
+```powershell
+# Ensure your virtual environment is active
+.venv\Scripts\activate
+
+# Run the "apsl" daily ETL process
+python scripts\apsl_internal.py
 ```
 
 The script will log its progress to the console. Upon completion, a successful run will have:
