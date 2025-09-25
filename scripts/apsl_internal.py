@@ -27,38 +27,64 @@ apsl_mapping = {
         "Day": "Day",
         "Account name": "Account name",
         "Campaign name": "Campaign name",
-        "Ad Set Name": "Ad Set Name",
+        "Ad set name": "Ad set name",
         "Ad name": "Ad name",
-        "Amount spent (USD)": "Amount spent (USD)",
+        "Amount spent (usd)": "Amount spent (USD)",
         "Impressions": "Impressions",
         "Reach": "Reach",
         "Frequency": "Frequency",
         "Link clicks": "Link clicks",
-        "Registrations Completed": "Registrations Completed",
+        "Registrations completed": "Registrations completed",
         "Adds to cart": "Adds to cart",
-        "Checkouts Initiated": "Checkouts Initiated",
+        "Checkouts initiated": "Checkouts initiated",
         "Purchases": "Purchases",
         "Purchases conversion value": "Purchases conversion value",
+    },
+    "Meta_OLIVE": {
+        "Day": "Day",
+        "Campaign name": "Campaign name",
+        "Ad set name": "Ad set name",
+        "Ad name": "Ad name",
+        "Amount spent (usd)": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Frequency": "Frequency",
+        "Reach": "Reach",
+        "Link clicks": "Link clicks",
+        "Adds to cart with shared items": "Adds to cart",
+        "Purchases with shared items": "Purchases",
+        "Purchases conversion value for shared items only": "Purchases conversion value",
+    },
+    "Meta_Lead": {
+        "Day": "Day",
+        "Campaign name": "Campaign name",
+        "Ad set name": "Ad set name",
+        "Ad name": "Ad name",
+        "Amount spent (usd)": "Amount spent (USD)",
+        "Impressions": "Impressions",
+        "Frequency": "Frequency",
+        "Reach": "Reach",
+        "Link clicks": "Link clicks",
+        "Leads": "Leads",
     },
     "X (Twitter)": {
         "Time period": "Day",
         "Funding source name": "Account name",
+        "Ad group name": "Ad set name",
         "Campaign name": "Campaign name",
-        "Ad Group name": "Ad Set Name",
         "Spend": "Amount spent (USD)",
         "Impressions": "Impressions",
         "Link clicks": "Link clicks",
-        "Leads": "Registrations Completed",
+        "Leads": "Registrations completed",
         "Cart additions": "Adds to cart",
-        "Checkouts initiated": "Checkouts Initiated",
+        "Checkouts initiated": "Checkouts initiated",
         "Purchases": "Purchases",
         "Purchases - sale amount": "Purchases conversion value",
     },
     "TikTok": {
-        "By Day": "Day",
+        "By day": "Day",
         "Account name": "Account name",
         "Campaign name": "Campaign name",
-        "Ad group name": "Ad Set Name",
+        "Ad group name": "Ad set name",
         "Ad name": "Ad name",
         "Cost": "Amount spent (USD)",
         "Impressions": "Impressions",
@@ -66,33 +92,40 @@ apsl_mapping = {
         "Reach": "Reach",
         "Clicks (destination)": "Link clicks",
         "Adds to cart (website)": "Adds to cart",
-        "Checkouts initiated (website)": "Checkouts Initiated",
+        "Checkouts initiated (website)": "Checkouts initiated",
         "Purchases (website)": "Purchases",
         "Purchase value (website)": "Purchases conversion value",
     },
 }
 
+# pl.Int64는 정수, Pl.String은 문자타입, Pl.Float64는 소수, Pl.date는 날짜로 위 맵핑한 우측 단어를 활용하여 추가하면 됨
 apsl_standard_schema = {
     "Day": pl.Date,
     "Source": pl.String,
     "Account name": pl.String,
     "Campaign name": pl.String,
-    "Ad Set Name": pl.String,
+    "Ad set name": pl.String,
     "Ad name": pl.String,
     "Amount spent (USD)": pl.Float64,
     "Impressions": pl.Int64,
     "Reach": pl.Int64,
     "Frequency": pl.Float64,
     "Link clicks": pl.Int64,
-    "Registrations Completed": pl.Int64,
+    "Registrations completed": pl.Int64,
     "Adds to cart": pl.Int64,
-    "Checkouts Initiated": pl.Int64,
+    "Checkouts initiated": pl.Int64,
     "Purchases": pl.Int64,
     "Purchases conversion value": pl.Float64,
+    "Leads": pl.Int64,
 }
 
 apsl_src_criteria = {
     "Meta": {"Day", "Purchases conversion value"},
+    "Meta_OLIVE": {
+        "Purchases with shared items",
+        "Purchases conversion value for shared items only",
+    },
+    "Meta_Lead": {"Leads", "Leads conversion value"},
     "X (Twitter)": {"Time period", "Cart additions"},
     "TikTok": {"Cost", "Clicks (destination)"},
 }
@@ -112,17 +145,18 @@ apsl = MultiSourceAdETL(
 
 apsl_merged = (
     apsl.read_tabular_files()
+    .capitalize_col_names()
     .assign_source()
     .clean_dataframes()
     .standardize_dataframes()
     .merge_and_collect()
 )
 
-apsl_out = processed_dir / ut.make_date_filename("apsl", apsl_merged)
+apsl_out = ut.make_date_filename("apsl", apsl_merged)
 
 daily_exports = {
     "apsl": {
-        "upload": True,  # True means that upload to the sheet
+        "upload": False,  # True means that upload to the sheet
         "export": True,  # True means that export to the proc dir
         "df": apsl_merged,
         "sheet_key": "1zX87QulsAnrHR03zpVCLc2Ophcn-oVx1kimtPsfJgTE",

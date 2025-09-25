@@ -1,5 +1,6 @@
 from typing import Literal
 import polars as pl
+import math
 
 
 def make_date_filename(prefix: str, df: pl.DataFrame) -> str:
@@ -57,6 +58,41 @@ def df_to_a1(
     range = column_range if range_mode == "column_range" else full_range
 
     return range
+
+
+def format_as_columns(
+    string_list: list, rows: int | None = None, col_width: int | None = None
+) -> str:
+    invalid_items = [
+        f"{item} is {type(item).__name__}."
+        for item in string_list
+        if not isinstance(item, str)
+    ]
+
+    if invalid_items:
+        invalid_items_str = "\n".join(invalid_items)
+        raise TypeError(
+            f"All elements must be of type `str`, but found {len(invalid_items)} invalid\n{invalid_items_str}"
+        )
+
+    string_list_len = len(string_list)
+    rows = rows or math.ceil((string_list_len / 2))
+    default_col_width = 30
+    col_width = col_width or default_col_width
+    block = ""
+
+    for row_index in range(0, rows):
+        for item_index in range(row_index, string_list_len, rows):
+            formatted_index = (
+                f"0{item_index + 1}" if item_index < 9 else f"{item_index + 1}"
+            )
+            text_len = len(string_list[item_index])
+            dynamic_whitespace = f"{' ' * (col_width - text_len)}"
+
+            block = f"{block}{formatted_index}. {string_list[item_index]}{dynamic_whitespace}"
+        block = f"{block}\n"
+
+    return block
 
 
 if __name__ == "__main__":

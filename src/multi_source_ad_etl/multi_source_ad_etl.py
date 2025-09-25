@@ -107,6 +107,22 @@ class MultiSourceAdETL:
             )
         return self
 
+    def capitalize_col_names(self):
+        """
+        Standardize column names across all DataFrames in self.dfs:
+        - First letter uppercase
+        - Rest lowercase
+
+        Returns:
+            Self: The instance with updated DataFrames
+        """
+        updated_dfs = []
+        for df in self.dfs:
+            new_cols = {col: col.capitalize() for col in df.columns}
+            updated_dfs.append(df.rename(new_cols))
+        self.dfs = updated_dfs
+        return self
+
     def _detect_source(self, df: pl.DataFrame) -> str:
         # Default criteria if none provided
         criteria = self.source_criteria
