@@ -156,7 +156,7 @@ apsl_out = ut.make_date_filename("apsl", apsl_merged)
 
 daily_exports = {
     "apsl": {
-        "upload": False,  # True means that upload to the sheet
+        "upload": True,  # True means that upload to the sheet
         "export": True,  # True means that export to the proc dir
         "df": apsl_merged,
         "sheet_key": "1zX87QulsAnrHR03zpVCLc2Ophcn-oVx1kimtPsfJgTE",
